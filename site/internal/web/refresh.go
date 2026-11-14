@@ -29,7 +29,7 @@ func (s *Server) refresh(ctx context.Context, rq live.RefreshRequest, assets str
 	case ok && s.demo(slug) != nil:
 		d := s.demo(slug)
 		parts = []templ.Component{views.DemoHead(d.card), views.DemoServer(d.server), views.DemoHow(d.how)}
-		scripts = s.components(d.Components...)
+		scripts = s.demoScripts(&d.Demo)
 	default:
 		return nil, nil // not a page that streams
 	}

@@ -327,7 +327,7 @@ func (s *Server) demoPage(w http.ResponseWriter, r *http.Request) {
 	sh := s.shell(r, d.Title, d.Summary, "/demos/"+d.Slug, "demos")
 	sh.JSONLD = s.graph(s.webPage("/demos/"+d.Slug, d.Title, d.Summary))
 	sh.Stream, sh.Tab = "/demos/"+d.Slug+"/stream", viewer.Tab
-	sh.Components = s.components(d.Components...)
+	sh.Components = s.demoScripts(&d.Demo)
 	s.page(w, r, sh, func(ctx context.Context, tx *sql.Tx) (templ.Component, error) {
 		stage, err := d.Page.Render(ctx, tx, viewer)
 		if err != nil {

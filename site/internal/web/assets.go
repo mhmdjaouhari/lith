@@ -19,6 +19,7 @@ import (
 	"github.com/zweiundeins/lith/site/internal/pixelart"
 	"github.com/zweiundeins/lith/site/internal/starbase"
 	"github.com/zweiundeins/lith/site/internal/views"
+	"github.com/zweiundeins/lith/site/internal/web/ui"
 )
 
 //go:embed static
@@ -91,6 +92,23 @@ func (s *Server) loadStatic(list []demo.Demo) error {
 	s.static.Add("lith/"+live.NewestFrame, plugin)
 	s.static.Add("vendor/datastar-rocket.js", datastar.JS())
 	s.static.Add("art/logo.svg", []byte(pixelart.Logo()))
+	// The TypeScript: lith-ui, which controllers import by name, and each
+	// demo's controller.
+	lib, err := ui.Transpile("lith-ui.ts", ui.Source, s.cfg.Dev)
+	if err != nil {
+		return err
+	}
+	s.static.Add(uiLib, lib)
+	for _, d := range list {
+		if d.Script == "" {
+			continue
+		}
+		js, err := ui.Transpile(d.Slug+".ts", d.Script, s.cfg.Dev)
+		if err != nil {
+			return fmt.Errorf("demo %s: %w", d.Slug, err)
+		}
+		s.static.Add(demoScript(d.Slug), js)
+	}
 	if s.starbase, err = starbase.Load(files); err != nil {
 		return err
 	}
@@ -100,7 +118,7 @@ func (s *Server) loadStatic(list []demo.Demo) error {
 		}
 	}
 	ds := s.static.URL("vendor/datastar-rocket.js")
-	m := map[string]any{"imports": map[string]string{"datastar": ds}}
+	m := map[string]any{"imports": map[string]string{"datastar": ds, "lith-ui": s.static.URL(uiLib)}}
 	integrity := map[string]string{}
 	for _, f := range s.starbase.Lazy() {
 		integrity["/static/"+f.Name] = f.Integrity // a bundle imports it by its plain name
@@ -122,6 +140,22 @@ func (s *Server) loadStatic(list []demo.Demo) error {
 		ImportMap:   string(importMap),
 	}
 	return nil
+}
+
+// uiLib is lith-ui's build among the static files.
+const uiLib = "ui/lith-ui.js"
+
+// demoScript is the build of a demo's controller among the static files.
+func demoScript(slug string) string { return "demos/" + slug + ".js" }
+
+// demoScripts are the modules a demo's page loads: the bundles of its
+// components, and its controller.
+func (s *Server) demoScripts(d *demo.Demo) []views.Script {
+	out := s.components(d.Components...)
+	if d.Script != "" {
+		out = append(out, views.Script{URL: s.static.URL(demoScript(d.Slug))})
+	}
+	return out
 }
 
 // siteComponents are the Starbase components every page uses: the menu.

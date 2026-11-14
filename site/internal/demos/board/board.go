@@ -107,6 +107,8 @@ var (
 	how string
 	//go:embed board.css
 	css string
+	//go:embed board.ts
+	script string
 )
 
 // Demo is the board as the site lists it.
@@ -119,6 +121,7 @@ var Demo = demo.Demo{
 	Server:     server,
 	How:        how,
 	CSS:        css,
+	Script:     script,
 	Components: []string{"sparkline"},
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},

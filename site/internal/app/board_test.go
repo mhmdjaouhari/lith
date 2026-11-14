@@ -153,7 +153,7 @@ func TestBoard(t *testing.T) {
 	boardFocus(t, ada, 6)
 	boardPress(t, ada, " ")
 	ada.Eval(t, `document.querySelector('.howto summary').focus()`, nil)
-	ada.Wait(t, `document.querySelector('[aria-live="assertive"]').textContent.startsWith('“Render a shared view” stays in Doing.') && !document.querySelector('style[data-text]').textContent.includes('--bd-pick')`, 2*time.Second)
+	ada.Wait(t, `document.querySelector('[aria-live="assertive"]').textContent.startsWith('“Render a shared view” stays in Doing.') && !document.querySelector('style[data-bd-looks]').textContent.includes('--bd-pick')`, 2*time.Second)
 
 	// The mouse: Open a stream, from done to the top of to do.
 	// Straight after the move, while its view transition still runs: the
@@ -195,7 +195,7 @@ func TestBoard(t *testing.T) {
 		boardPress(t, bob, "ArrowRight")
 		boardPress(t, bob, " ")
 		bob.Wait(t, `document.querySelector('#board-outcome.is-refused')?.textContent.includes('moved “Sketch the monolith” first. It is in Done now.')`, 5*time.Second)
-		bob.Wait(t, `!document.querySelector('style[data-text]').textContent.includes('--bd-wait')`, 2*time.Second)
+		bob.Wait(t, `!document.querySelector('style[data-bd-looks]').textContent.includes('--bd-wait')`, 2*time.Second)
 		var outcome string
 		ada.Eval(t, `document.querySelector('#board-outcome').textContent`, &outcome)
 		if !strings.Contains(outcome, "You moved “Sketch the monolith” to Done.") {

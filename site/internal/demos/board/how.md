@@ -34,7 +34,7 @@ func boardView() live.View {
 			if err != nil {
 				return nil, err
 			}
-			v, err := demo.Signals(versionSignal(b.Version))
+			v, err := demo.Signals(ds.Tree(S.V.Set(b.Version)))
 			if err != nil {
 				return nil, err
 			}
@@ -46,25 +46,32 @@ func boardView() live.View {
 }
 ```
 
-`demo.Animated` renders the frame in two forms: a tab's first frame morphs at once, every later one inside a view transition. The frame also sets the signal `$_board.v` to the board's version, and the render tells the numbers above the board how many streams watch it.
+`demo.Animated` renders the frame in two forms: a tab's first frame morphs at once, every later one inside a view transition. The frame also sets the signal `$_board.v` to the board's version (`S.V` is its typed ref, which a Go struct generates, so the patch cannot name a signal the page lacks), and the render tells the numbers above the board how many streams watch it.
 
 ## The pending move
 
 Dropping a card moves nothing on the page. The page sends the move, leaves the card where it was, faded, with a pixel walking in its corner, and marks the place it goes with a bar of light. The pending state ends once the tab's outcome has come with the same op id, and the board shows at least the version that outcome names:
 
-```go title=expr.go
-const settle = `const op = $_board.op
-if (!op || $_board.ack !== op || $_board.v < $_board.ackv) return
-const card = $_board.pcard
-if (!$_board.ok) {
-	$_board.nudge = card
-	setTimeout(() => { if ($_board.nudge === card) $_board.nudge = 0 }, 900)
-}
-$_board.op = ''
-$_board.pcard = 0
-$_board.problem = ''
-if (!$_board.drag) el.bd.aim(-1, 0)`
+```ts title=board.ts
+	scope.effect(() => {
+		const op = s.op
+		if (!op || s.ack !== op || s.v < s.ackv) return
+		const c = s.pcard
+		if (!s.ok) {
+			s.nudge = c
+			const t = setTimeout(() => {
+				if (s.nudge === c) s.nudge = 0
+			}, 900)
+			scope.defer(() => clearTimeout(t))
+		}
+		s.op = ''
+		s.pcard = 0
+		s.problem = ''
+		if (!s.drag) aim(-1, 0)
+	})
 ```
+
+The effect lives in the board's controller, `board.ts`, which TypeScript checks against the same Go struct the page declares its signals from: `s` is `$_board`, typed by the `Signals` struct in `signals.go`, so a misspelt signal fails the type check instead of a page.
 
 Both come in one write. The move touches the board's topic and the tab's, the hub renders both views in the same tick, and the site writes a tick's frames to a stream at once, the board first. The faded card and the bar are a style element outside the regions the stream morphs, built from these signals, so no frame takes them away early.
 

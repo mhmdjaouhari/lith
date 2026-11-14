@@ -10,6 +10,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // streamOpen reports whether a tab's stream is open: every tab of the page
@@ -59,7 +60,7 @@ func boardView() live.View {
 			if err != nil {
 				return nil, err
 			}
-			v, err := demo.Signals(versionSignal(b.Version))
+			v, err := demo.Signals(ds.Tree(S.V.Set(b.Version)))
 			if err != nil {
 				return nil, err
 			}
@@ -68,15 +69,6 @@ func boardView() live.View {
 			return f, nil
 		},
 	}
-}
-
-func versionSignal(v int64) any {
-	type board struct {
-		V int64 `json:"v"`
-	}
-	return struct {
-		Board board `json:"_board"`
-	}{board{v}}
 }
 
 // statsView renders the board's numbers every second, and when a tab
@@ -110,16 +102,6 @@ func hereView() live.View {
 	}
 }
 
-// ack tells the page which move the tab's outcome belongs to.
-type ack struct {
-	Board struct {
-		Ack    string `json:"ack"`
-		AckV   int64  `json:"ackv"`
-		OK     bool   `json:"ok"`
-		Synced bool   `json:"synced"` // the stream the page opened brought the tab's row (demo.Pending)
-	} `json:"_board"`
-}
-
 // tabView is the tab's own region: what became of its last move, from its
 // row in site_tabs, with the op id and the board version that end the
 // page's pending state.
@@ -137,9 +119,9 @@ func tabView(v demo.Viewer) live.View {
 			if err != nil {
 				return nil, err
 			}
-			var a ack
-			a.Board.Ack, a.Board.AckV, a.Board.OK, a.Board.Synced = state.Op, state.Version, state.Refusal == "", true
-			signals, err := demo.Signals(a)
+			// Which move the outcome belongs to; synced: the stream the page
+			// opened brought the tab's row (demo.Pending).
+			signals, err := demo.Signals(ds.Tree(S.Ack.Set(state.Op), S.AckV.Set(state.Version), S.OK.Set(state.Refusal == ""), S.Synced.Set(true)))
 			if err != nil {
 				return nil, err
 			}

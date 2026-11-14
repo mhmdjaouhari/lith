@@ -377,7 +377,8 @@ func TestViews(t *testing.T) {
 		var html strings.Builder
 		page.Render(ctx, &html)
 		for _, want := range []string{
-			`data-signals="{_board: {v: 1,`,
+			`data-signals="{&#34;_board&#34;:{`,
+			`&#34;v&#34;:1,`,
 			`id="board-here"`,
 			`id="board-outcome"`,
 			`[data-who=&#34;` + WhoOf(ada.Session),

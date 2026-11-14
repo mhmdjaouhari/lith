@@ -167,18 +167,38 @@ type Pending struct {
 	Lost     string // the page's words when the op was lost to a reconnect
 }
 
+// PendingSignals are the signals a pending op lives in. A demo's
+// //ds:signals struct embeds them, so its page declares each, and
+// PendingOf builds the demo's Pending from their refs.
+//
+//ds:signals
+type PendingSignals struct {
+	Op       string `json:"op"`       // the op waiting for its ack, "" for none
+	Ack      string `json:"ack"`      // the op the tab's last outcome answers
+	Synced   bool   `json:"synced"`   // the stream brought the tab's row since it (re)connected
+	Inflight int    `json:"inflight"` // the op's requests in flight
+	Recheck  bool   `json:"recheck"`  // a reconnect came while one was in flight
+	Problem  string `json:"problem"`  // the page's line for what went wrong
+}
+
 // NewPending is the Pending of a demo whose signals sig hold op, ack,
 // inflight, recheck, synced and problem, with the op ended by clearing it.
 func NewPending(sig string) Pending {
-	s := "$" + sig + "."
+	return PendingOf(NewPendingSignalsRefs(sig))
+}
+
+// PendingOf is the Pending of the signals s, with the op ended by
+// clearing it.
+func PendingOf(s PendingSignalsRefs) Pending {
+	sig, _ := strings.CutSuffix(s.Op.Path(), ".op")
 	return Pending{
 		Sig:      sig,
 		Match:    "evt.detail.el === el",
-		Waiting:  s + "op !== '' && " + s + "ack !== " + s + "op",
-		End:      s + "op = ''",
-		Inflight: s + "inflight",
-		Recheck:  s + "recheck",
-		Problem:  s + "problem",
+		Waiting:  s.Op.Ne("") + " && " + s.Ack.String() + " !== " + s.Op.String(),
+		End:      s.Op.Assign(""),
+		Inflight: s.Inflight.String(),
+		Recheck:  s.Recheck.String(),
+		Problem:  s.Problem.String(),
 		Down:     "The connection is down. Try again once it is back.",
 		Failed:   "That did not work. Try again.",
 		Lost:     "That did not go through. Try again.",
