@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -10,20 +9,17 @@ import (
 
 // TestTypeCheck runs tsc over the site's TypeScript, lith-ui and the
 // demos' controllers, against the interfaces dsgen writes from the Go
-// structs. It needs the pinned TypeScript: npm ci in site/. CI runs it.
+// structs. tsc is TypeScript 7's native compiler, a Go tool pinned in
+// go.mod, so the check needs no Node and always runs.
 func TestTypeCheck(t *testing.T) {
+	if testing.Short() {
+		t.Skip("tsc: the first go tool tsc builds the compiler")
+	}
 	root, err := filepath.Abs("../../..")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tsc := filepath.Join(root, "node_modules", ".bin", "tsc")
-	if _, err := os.Stat(tsc); err != nil {
-		if os.Getenv("CI") != "" {
-			t.Fatal("no tsc: run npm ci in site/")
-		}
-		t.Skip("no tsc: run npm ci in site/ to type-check the TypeScript")
-	}
-	cmd := exec.Command(tsc, "-p", root)
+	cmd := exec.Command("go", "tool", "tsc", "-p", root)
 	cmd.Dir = root
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("tsc: %v\n%s", err, out)

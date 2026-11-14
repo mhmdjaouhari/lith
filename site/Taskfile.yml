@@ -33,19 +33,18 @@ tasks:
       - go run ./cmd/lith-site -dev -log text
 
   seam:
-    desc: Write the typed Datastar seam of every package with //ds: directives (cmd/dsgen) and compile the templ views
+    desc: "Write the typed Datastar seam of every package with //ds: directives (cmd/dsgen) and compile the templ views"
     cmds:
       - go generate ./internal/...
       - go tool templ generate
 
   typecheck:
-    desc: Type-check the TypeScript (lith-ui and the demos' controllers) against the interfaces dsgen writes; installs the pinned tsc first
+    desc: Type-check the TypeScript (lith-ui and the demos' controllers) against the interfaces dsgen writes, with TypeScript 7's native tsc (a Go tool pinned in go.mod)
     cmds:
-      - npm ci --no-audit --no-fund
-      - npx tsc -p .
+      - go tool tsc -p .
 
   test:
-    desc: Vet, check the formatting, run the tests with the race detector (Chromium tests need LITH_CHROME_NO_SANDBOX=1 where there is no sandbox; TestTypeCheck needs npm ci)
+    desc: Vet, check the formatting, run the tests with the race detector (Chromium tests need LITH_CHROME_NO_SANDBOX=1 where there is no sandbox)
     deps: [history]
     cmds:
       - go vet ./...

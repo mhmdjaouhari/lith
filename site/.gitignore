@@ -4,4 +4,3 @@
 *.test
 *.out
 /internal/githistory/data/history.json
-/node_modules/
