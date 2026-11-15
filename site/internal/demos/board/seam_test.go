@@ -50,6 +50,24 @@ func TestSeam(t *testing.T) {
 	}
 }
 
+// TestMeStyle checks the viewer's style: its CSS intact inside <style>,
+// and nothing for a seed that is not one.
+func TestMeStyle(t *testing.T) {
+	for me, want := range map[string]string{
+		"0123abcd":                  `<style>[data-demo="board"] [data-who="0123abcd"]{--bd-me:1;--bd-you:" (you)"}</style>`,
+		`x"]{}*{color:red}[data-x="`: ``,
+		"":                          ``,
+	} {
+		var sb strings.Builder
+		if err := meStyle(me).Render(context.Background(), &sb); err != nil {
+			t.Fatal(err)
+		}
+		if sb.String() != want {
+			t.Errorf("%q: %s, want %s", me, sb.String(), want)
+		}
+	}
+}
+
 // TestDeclared checks that the stage declares the signals Signals has,
 // with their starting values.
 func TestDeclared(t *testing.T) {

@@ -8,6 +8,17 @@ import (
 	"github.com/zweiundeins/lith/site/internal/views"
 )
 
+// meStyle marks the viewer's own avatar, wherever the stream puts it: the
+// shared views carry nothing about who looks at them. The server draws it,
+// so it holds before any script runs. templ writes a <style>'s children as
+// they stand, so the rule goes in raw: it is made of the //ds:dom names
+// and a seed validWho found to be 8 hex digits (TestMeStyle).
+templ meStyle(me string) {
+	if validWho(me) {
+		@templ.Raw("<style>" + meRule(me) + "</style>")
+	}
+}
+
 // Stage is the demo on its page: who is here and the numbers on top, the
 // board, and under it the tab's outcome and the help. The stage itself is
 // never morphed; the regions inside it with ids are the stream's.

@@ -1,13 +1,9 @@
 package board
 
 import (
-	"context"
-	"io"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/a-h/templ"
 )
 
 func cardID(id int64) string { return "board-card-" + strconv.FormatInt(id, 10) }
@@ -27,16 +23,10 @@ func cardsWord(n int) string {
 
 func hueStyle(a Avatar) string { return "--h: " + strconv.Itoa(a.Hue) }
 
-// meStyle marks the viewer's own avatar, wherever the stream puts it: the
-// shared views carry nothing about who looks at them.
-func meStyle(me string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		if !validWho(me) {
-			return nil
-		}
-		_, err := io.WriteString(w, `<style>[data-demo="board"] [data-who="`+me+`"]{--bd-me:1;--bd-you:" (you)"}</style>`)
-		return err
-	})
+// meRule is the CSS of meStyle: the viewer's avatar, by its seed (hex,
+// validWho), marked with PropMe and named " (you)" by PropYou.
+func meRule(me string) string {
+	return `[data-demo="` + Slug + `"] [` + AttrWho + `="` + me + `"]{` + PropMe + `:1;` + PropYou + `:" (you)"}`
 }
 
 // hereLine counts the people on the board, and their tabs when some

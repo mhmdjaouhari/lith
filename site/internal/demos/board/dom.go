@@ -14,6 +14,7 @@ const (
 	AttrVersion  = "data-version" // the card's version, which a move sends as seen
 	AttrTitle    = "data-title"   // the card's title, for what the page says
 	AttrHello    = "data-hello"   // the element that says hello, outside the stage's count of the move's requests
+	AttrWho      = "data-who"     // an avatar's seed, which marks the viewer's own (meStyle)
 
 	ClassLanes     = "bd-lanes"       // the lanes, the drag's bounds
 	ClassLaneCards = "bd-lane__cards" // a lane's list, the marker's anchor when it is empty
@@ -36,6 +37,8 @@ const (
 	PropOn     = "--bd-on"     // the marker shows
 	PropEdge   = "--bd-edge"   // the marker sits below its anchor, not above
 	PropSlot   = "--bd-slot"   // the marker's anchor
+	PropMe     = "--bd-me"     // the viewer's own avatar (meStyle)
+	PropYou    = "--bd-you"    // and what its name adds
 	AnimBusy   = "bd-busy"
 	AnimNudge  = "bd-nudge"
 )

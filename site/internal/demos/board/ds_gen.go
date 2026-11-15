@@ -16,6 +16,7 @@ var dsDOM = map[string]string{
 	"AttrVersion":    AttrVersion,
 	"AttrTitle":      AttrTitle,
 	"AttrHello":      AttrHello,
+	"AttrWho":        AttrWho,
 	"ClassLanes":     ClassLanes,
 	"ClassLaneCards": ClassLaneCards,
 	"ClassSlot":      ClassSlot,
@@ -33,6 +34,8 @@ var dsDOM = map[string]string{
 	"PropOn":         PropOn,
 	"PropEdge":       PropEdge,
 	"PropSlot":       PropSlot,
+	"PropMe":         PropMe,
+	"PropYou":        PropYou,
 	"AnimBusy":       AnimBusy,
 	"AnimNudge":      AnimNudge,
 }
