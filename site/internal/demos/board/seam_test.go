@@ -35,6 +35,11 @@ func TestSeam(t *testing.T) {
 		for _, err := range dscheck.Check(sb.String(), schema, "board") {
 			t.Errorf("%s: %v", name, err)
 		}
+		if name == "stage" {
+			for _, err := range dscheck.CheckDOM(sb.String(), css, dsDOM) {
+				t.Errorf("the names board.ts reads the page by: %v", err)
+			}
+		}
 	}
 	errs, err := dscheck.Lint(".")
 	if err != nil {

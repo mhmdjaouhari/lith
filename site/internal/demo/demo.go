@@ -54,13 +54,13 @@ type Demo struct {
 	// @scope ([data-demo="<slug>"]), and the site adds it to its bundle in
 	// the components layer.
 	CSS string
-	// Script is the TypeScript of the demo's controller, embedded from
-	// <slug>.ts, if it has one: an ES module that imports 'datastar' and
-	// 'lith-ui' (internal/web/ui), typed by the ds.gen.d.ts dsgen writes
-	// from the demo's structs. The site strips its types with esbuild as
-	// it starts and loads it on the demo's page; tsc checks it (go tool
-	// task typecheck).
-	Script string
+	// Script holds the TypeScript of the demo's controller, if it has one:
+	// <slug>.ts, an ES module that imports 'datastar', 'lith-ui'
+	// (internal/web/ui) and, by relative path, modules beside it in Script
+	// (the ds.gen.ts dsgen writes from the demo's structs and DOM names).
+	// The site bundles it with esbuild as it starts and loads it on the
+	// demo's page; tsc checks it (go tool tsc).
+	Script fs.FS
 	// Components are the Starbase components the demo renders, by slug
 	// ("pixel-board"): the site loads their bundles, and those of the
 	// components they render, on the demo's page, and on the landing page

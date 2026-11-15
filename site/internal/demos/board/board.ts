@@ -1,8 +1,8 @@
 // The board's controller: the drag, the keyboard and the pending move's
-// looks, on the stage (data-board). It reads the page: the lanes carry
-// data-lane and data-name, the cards data-card, data-version and
-// data-title. On a narrow board a lane is a row of cards that wraps, and
-// board.css says so with --bd-flow.
+// looks, on the stage (data-board). It reads the page by the names that
+// dom.go shares with the templates: the lanes carry their index and name,
+// the cards their id, version and title. On a narrow board a lane is a row
+// of cards that wraps, and board.css says so with PropFlow.
 //
 // Nothing here moves a card. It moves the page's signals ($_board, typed
 // by Signals from signals.go) and its own, and dispatches the move, typed
@@ -10,12 +10,40 @@
 // card.
 
 import { announcer, attr, commands, controller, insertionIndex, local, must, nearest, num, opId, pending, pointerDrag, type Rule, Sheet, signals } from 'lith-ui'
-import type { Commands, Roots, Signals } from './ds.gen'
+import {
+	AnimBusy,
+	AnimNudge,
+	AttrCard,
+	AttrLane,
+	AttrLaneName,
+	AttrTitle,
+	AttrVersion,
+	ClassCard,
+	ClassGhost,
+	ClassGrip,
+	ClassLaneCards,
+	ClassLanes,
+	ClassMarker,
+	ClassSlot,
+	type Commands,
+	PropBusy,
+	PropEdge,
+	PropFlow,
+	PropLift,
+	PropNudge,
+	PropOn,
+	PropPick,
+	PropSlot,
+	PropTarget,
+	PropWait,
+	type Roots,
+	type Signals,
+} from './ds.gen'
 
 type Mode = Signals['mode']
 
 /** The properties the controller's sheet sets, which board.css reads. */
-type Look = '--bd-lift' | '--bd-pick' | '--bd-wait' | '--bd-busy' | '--bd-nudge' | '--bd-target' | 'anchor-name'
+type Look = typeof PropLift | typeof PropPick | typeof PropWait | typeof PropBusy | typeof PropNudge | typeof PropTarget | 'anchor-name'
 
 controller('board', (el, scope) => {
 	// The page's signals: what the page's attributes and the server read.
@@ -29,19 +57,19 @@ controller('board', (el, scope) => {
 	const say = announcer(() => s.say, (t) => (s.say = t))
 	const send = commands<Commands>(el)
 
-	const lane = (n: number): HTMLElement => must(el, `[data-lane="${n}"]`)
-	const lanes = (): HTMLElement[] => [...el.querySelectorAll<HTMLElement>('[data-lane]')]
-	const card = (id: number): HTMLElement | null => document.getElementById('board-card-' + id)
+	const lane = (n: number): HTMLElement => must(el, attr(AttrLane, n))
+	const lanes = (): HTMLElement[] => [...el.querySelectorAll<HTMLElement>(`[${AttrLane}]`)]
+	const card = (id: number): HTMLElement | null => el.querySelector<HTMLElement>(attr(AttrCard, id))
 	const laneOf = (c: HTMLElement): number => {
-		const l = c.closest<HTMLElement>('[data-lane]')
+		const l = c.closest<HTMLElement>(`[${AttrLane}]`)
 		if (!l) throw new Error('board: a card outside a lane')
-		return num(l, 'lane')
+		return num(l, AttrLane)
 	}
 	const indexOf = (c: HTMLElement): number => (c.parentElement ? [...c.parentElement.children].indexOf(c) : 0)
 	const others = (n: number): HTMLElement[] =>
-		[...lane(n).querySelectorAll<HTMLElement>('[data-card]')].filter((c) => num(c, 'card') !== (h.drag || h.pcard))
-	const name = (n: number): string => lane(n).dataset['name'] ?? ''
-	const title = (c: HTMLElement): string => c.dataset['title'] ?? ''
+		[...lane(n).querySelectorAll<HTMLElement>(`[${AttrCard}]`)].filter((c) => num(c, AttrCard) !== (h.drag || h.pcard))
+	const name = (n: number): string => lane(n).getAttribute(AttrLaneName) ?? ''
+	const title = (c: HTMLElement): string => c.getAttribute(AttrTitle) ?? ''
 	const place = (n: number, index: number, count: number): string => `${name(n)}, ${index + 1} of ${count + 1}`
 
 	// aim marks where the card would go: lane -1 is nowhere.
@@ -57,15 +85,15 @@ controller('board', (el, scope) => {
 	}
 
 	const aimAt = (x: number, y: number): void => {
-		const box = must(el, '.bd-lanes').getBoundingClientRect()
+		const box = must(el, `.${ClassLanes}`).getBoundingClientRect()
 		if (x < box.left - 48 || x > box.right + 48 || y < box.top - 64 || y > box.bottom + 64) {
 			aim(-1, 0)
 			return
 		}
 		const near = nearest(lanes(), x, y)
 		if (!near) return
-		const n = num(near, 'lane')
-		const wraps = getComputedStyle(near).getPropertyValue('--bd-flow').trim() === '1'
+		const n = num(near, AttrLane)
+		const wraps = getComputedStyle(near).getPropertyValue(PropFlow).trim() === '1'
 		aim(n, insertionIndex(others(n), x, y, wraps))
 	}
 
@@ -75,7 +103,7 @@ controller('board', (el, scope) => {
 		const from = laneOf(c)
 		h.drag = id
 		s.mode = mode
-		h.seen = num(c, 'version')
+		h.seen = num(c, AttrVersion)
 		h.from = from
 		h.at = indexOf(c)
 		aim(from, h.at)
@@ -119,8 +147,8 @@ controller('board', (el, scope) => {
 		if (key === 'ArrowDown') next = c.nextElementSibling
 		if (key === 'ArrowLeft' || key === 'ArrowRight') {
 			const step = key === 'ArrowLeft' ? -1 : 1
-			for (n += step; !next && n >= 0 && el.querySelector(`[data-lane="${n}"]`); n += step) {
-				const cards = lane(n).querySelectorAll('[data-card]')
+			for (n += step; !next && n >= 0 && el.querySelector(attr(AttrLane, n)); n += step) {
+				const cards = lane(n).querySelectorAll(`[${AttrCard}]`)
 				next = cards[Math.min(i, cards.length - 1)] ?? null
 			}
 		}
@@ -130,15 +158,15 @@ controller('board', (el, scope) => {
 	// The pointer: the main button of a mouse or pen anywhere on a card, a
 	// finger on its grip (the rest of the card scrolls the page).
 	const drag = pointerDrag(el, scope, {
-		items: '[data-card]',
-		handle: '.bd-card__grip',
-		ghost: must(el, '.bd-ghost'),
-		copy: (c) => must(c, '.bd-card').cloneNode(true),
+		items: `[${AttrCard}]`,
+		handle: `.${ClassGrip}`,
+		ghost: must(el, `.${ClassGhost}`),
+		copy: (c) => must(c, `.${ClassCard}`).cloneNode(true),
 		enabled: () => !s.op,
 		pressed: () => {
 			if (s.mode === 'keys') cancel(false)
 		},
-		lift: (c) => lift(num(c, 'card'), 'pointer'),
+		lift: (c) => lift(num(c, AttrCard), 'pointer'),
 		aim: aimAt,
 		drop,
 		cancel: () => cancel(false),
@@ -174,12 +202,12 @@ controller('board', (el, scope) => {
 			}
 			return
 		}
-		const c = evt.target instanceof Element ? evt.target.closest<HTMLElement>('[data-card]') : null
+		const c = evt.target instanceof Element ? evt.target.closest<HTMLElement>(`[${AttrCard}]`) : null
 		if (!c || evt.altKey || evt.ctrlKey || evt.metaKey) return
 		if (k === ' ' || k === 'Enter') {
 			evt.preventDefault()
 			if (s.op) say('One move at a time: the last one is on its way.')
-			else lift(num(c, 'card'), 'keys')
+			else lift(num(c, AttrCard), 'keys')
 		} else if (arrow) {
 			evt.preventDefault()
 			walk(c, k)
@@ -241,28 +269,28 @@ controller('board', (el, scope) => {
 	// lane's last card, or at the top of an empty lane (the anchor), and
 	// stays hidden while the place is the card's own.
 	const sheet = new Sheet<Look>(scope)
-	const marker = must(el, '.bd-marker')
+	const marker = must(el, `.${ClassMarker}`)
 	scope.effect(() => {
 		const rules: Rule<Look>[] = []
-		const card = (id: number): string => attr('data-card', id)
-		if (h.drag) rules.push([card(h.drag), s.mode === 'keys' ? { '--bd-pick': 1 } : { '--bd-lift': 1 }])
-		if (h.pcard) rules.push([card(h.pcard), { '--bd-wait': 1, '--bd-busy': 'bd-busy' }])
-		if (h.nudge) rules.push([card(h.nudge), { '--bd-nudge': 'bd-nudge' }])
+		const card = (id: number): string => attr(AttrCard, id)
+		if (h.drag) rules.push([card(h.drag), s.mode === 'keys' ? { [PropPick]: 1 } : { [PropLift]: 1 }])
+		if (h.pcard) rules.push([card(h.pcard), { [PropWait]: 1, [PropBusy]: AnimBusy }])
+		if (h.nudge) rules.push([card(h.nudge), { [PropNudge]: AnimNudge }])
 		let on = false
 		let edge = false
 		if (h.lane >= 0) {
-			const lane = attr('data-lane', h.lane)
-			rules.push([lane, { '--bd-target': 1 }])
+			const lane = attr(AttrLane, h.lane)
+			rules.push([lane, { [PropTarget]: 1 }])
 			on = !(h.drag && h.lane === h.from && h.index === h.at)
-			if (on && h.n === 0) rules.push([`${lane} .bd-lane__cards`, { 'anchor-name': '--bd-slot' }])
+			if (on && h.n === 0) rules.push([`${lane} .${ClassLaneCards}`, { 'anchor-name': PropSlot }])
 			else if (on) {
 				edge = h.index >= h.n
 				const of = `of :not(${card(h.drag || h.pcard)})`
-				rules.push([`${lane} .bd-slot:${edge ? `nth-last-child(1 ${of})` : `nth-child(${h.index + 1} ${of})`}`, { 'anchor-name': '--bd-slot' }])
+				rules.push([`${lane} .${ClassSlot}:${edge ? `nth-last-child(1 ${of})` : `nth-child(${h.index + 1} ${of})`}`, { 'anchor-name': PropSlot }])
 			}
 		}
 		sheet.set(rules)
-		marker.style.setProperty('--bd-on', on ? '1' : '0')
-		marker.style.setProperty('--bd-edge', edge ? '1' : '0')
+		marker.style.setProperty(PropOn, on ? '1' : '0')
+		marker.style.setProperty(PropEdge, edge ? '1' : '0')
 	})
 })

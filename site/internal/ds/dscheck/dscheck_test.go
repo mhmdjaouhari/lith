@@ -52,6 +52,19 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+func TestCheckDOM(t *testing.T) {
+	page := `<div class="a b" data-card="1"><p class="c"></p></div>`
+	css := `.a { --x-on: 1; animation: spin 1s } @keyframes spin {}`
+	good := map[string]string{"AttrCard": "data-card", "ClassB": "b", "ClassC": "c", "PropOn": "--x-on", "AnimSpin": "spin"}
+	if errs := CheckDOM(page, css, good); len(errs) > 0 {
+		t.Fatalf("%v", errs)
+	}
+	bad := map[string]string{"AttrLane": "data-lane", "ClassD": "d", "PropOff": "--x-off", "AnimSpin": "spinn", "Other": "x"}
+	if errs := CheckDOM(page, css, bad); len(errs) != len(bad) {
+		t.Errorf("%d errors for %d bad names: %v", len(errs), len(bad), errs)
+	}
+}
+
 func TestLint(t *testing.T) {
 	dir := t.TempDir()
 	src := "templ X() {\n\t<p data-show=\"$_x.op\" data-text={ s }></p>\n\t<p data-card=\"3\" data-on:click={ x }></p>\n\t<p data-on:click__window=\"@post('/x')\"></p>\n}\n"

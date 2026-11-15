@@ -100,10 +100,10 @@ func (s *Server) loadStatic(list []demo.Demo) error {
 	}
 	s.static.Add(uiLib, lib)
 	for _, d := range list {
-		if d.Script == "" {
+		if d.Script == nil {
 			continue
 		}
-		js, err := ui.Transpile(d.Slug+".ts", d.Script, s.cfg.Dev)
+		js, err := ui.Bundle(d.Script, d.Slug+".ts", s.cfg.Dev)
 		if err != nil {
 			return fmt.Errorf("demo %s: %w", d.Slug, err)
 		}
@@ -152,7 +152,7 @@ func demoScript(slug string) string { return "demos/" + slug + ".js" }
 // components, and its controller.
 func (s *Server) demoScripts(d *demo.Demo) []views.Script {
 	out := s.components(d.Components...)
-	if d.Script != "" {
+	if d.Script != nil {
 		out = append(out, views.Script{URL: s.static.URL(demoScript(d.Slug))})
 	}
 	return out

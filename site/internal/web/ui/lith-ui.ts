@@ -251,9 +251,9 @@ export function opId(): string {
 }
 
 /** The value of a data- attribute as a number; a missing one is an error in the page. */
-export function num(el: HTMLElement, key: string): number {
-	const v = el.dataset[key]
-	if (v === undefined || v === '' || Number.isNaN(+v)) throw new Error(`lith-ui: data-${key} is no number`)
+export function num(el: Element, name: `data-${string}`): number {
+	const v = el.getAttribute(name)
+	if (v === null || v === '' || Number.isNaN(+v)) throw new Error(`lith-ui: ${name} is no number`)
 	return +v
 }
 

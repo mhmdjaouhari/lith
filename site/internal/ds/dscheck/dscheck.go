@@ -207,6 +207,64 @@ func (s Schema) Has(path string) error {
 	return nil
 }
 
+// CheckDOM reports the //ds:dom names (dsgen's dsDOM, by Go name) that
+// the page or its stylesheet lacks, by the name's kind: an Attr… is an
+// attribute of an element of page, a Class… a class of one, a Prop… a
+// custom property and an Anim… an animation that css names. The
+// controller reads the page by these names; one the templates or the CSS
+// dropped is a drag that finds nothing.
+func CheckDOM(page, css string, names map[string]string) []error {
+	nodes, err := html.ParseFragment(strings.NewReader(page), &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body})
+	if err != nil {
+		return []error{err}
+	}
+	attrs, classes := map[string]bool{}, map[string]bool{}
+	var walk func(n *html.Node)
+	walk = func(n *html.Node) {
+		for _, a := range n.Attr {
+			attrs[a.Key] = true
+			if a.Key == "class" {
+				for _, c := range strings.Fields(a.Val) {
+					classes[c] = true
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	for _, n := range nodes {
+		walk(n)
+	}
+	keys := make([]string, 0, len(names))
+	for k := range names {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var errs []error
+	for _, name := range keys {
+		v := names[name]
+		var ok bool
+		switch {
+		case strings.HasPrefix(name, "Attr"):
+			ok = attrs[v]
+		case strings.HasPrefix(name, "Class"):
+			ok = classes[v]
+		case strings.HasPrefix(name, "Prop"):
+			ok = regexp.MustCompile(regexp.QuoteMeta(v) + `\b`).MatchString(css)
+		case strings.HasPrefix(name, "Anim"):
+			ok = regexp.MustCompile(`@keyframes\s+` + regexp.QuoteMeta(v) + `\b`).MatchString(css)
+		default:
+			errs = append(errs, fmt.Errorf("%s: name a //ds:dom constant Attr…, Class…, Prop… or Anim…", name))
+			continue
+		}
+		if !ok {
+			errs = append(errs, fmt.Errorf("%s = %q is not on the page or in its CSS", name, v))
+		}
+	}
+	return errs
+}
+
 // inline is a Datastar attribute of a template with a literal value that
 // reads a signal or calls an action.
 var inline = regexp.MustCompile(`\bdata-([a-z][a-z0-9-]*)(?::[a-z0-9-]+)?(?:__[a-z0-9.-]+)*="([^"]*[$@][^"]*)"`)

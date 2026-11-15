@@ -7,6 +7,35 @@ import (
 	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
+// dsDOM are the package's //ds:dom constants by name, for dscheck.CheckDOM:
+// each must be on the page the package renders.
+var dsDOM = map[string]string{
+	"AttrLane":       AttrLane,
+	"AttrLaneName":   AttrLaneName,
+	"AttrCard":       AttrCard,
+	"AttrVersion":    AttrVersion,
+	"AttrTitle":      AttrTitle,
+	"ClassLanes":     ClassLanes,
+	"ClassLaneCards": ClassLaneCards,
+	"ClassSlot":      ClassSlot,
+	"ClassCard":      ClassCard,
+	"ClassGrip":      ClassGrip,
+	"ClassGhost":     ClassGhost,
+	"ClassMarker":    ClassMarker,
+	"PropFlow":       PropFlow,
+	"PropLift":       PropLift,
+	"PropPick":       PropPick,
+	"PropWait":       PropWait,
+	"PropBusy":       PropBusy,
+	"PropNudge":      PropNudge,
+	"PropTarget":     PropTarget,
+	"PropOn":         PropOn,
+	"PropEdge":       PropEdge,
+	"PropSlot":       PropSlot,
+	"AnimBusy":       AnimBusy,
+	"AnimNudge":      AnimNudge,
+}
+
 // SignalsRefs are the signals of Signals, each a ds.Ref.
 type SignalsRefs struct {
 	demo.OpSignalsRefs

@@ -30,8 +30,8 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		</div>
 		<div class="bd__board">
 			@LanesView(b, now)
-			<div class="bd-marker" aria-hidden="true"></div>
-			<div class="bd-ghost" aria-hidden="true" inert style="display: none" data-show={ S.Mode.Eq(Pointer) }></div>
+			<div class={ ClassMarker } aria-hidden="true"></div>
+			<div class={ ClassGhost } aria-hidden="true" inert style="display: none" data-show={ S.Mode.Eq(Pointer) }></div>
 		</div>
 		<div class="bd__foot">
 			@Outcome(TabState{})
@@ -48,18 +48,18 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 // card has a view-transition name of its own, so when a frame moves one,
 // it glides from its old place to its new one.
 templ LanesView(b Board, now time.Time) {
-	<div id="board-lanes" class="bd-lanes">
+	<div id="board-lanes" class={ ClassLanes }>
 		for i, lane := range b.Lanes {
 			<section class="bd-lane" data-lane={ strconv.Itoa(i) } data-name={ LaneNames[i] } aria-labelledby={ "board-lane-" + strconv.Itoa(i) }>
 				<h3 id={ "board-lane-" + strconv.Itoa(i) } class="bd-lane__head">
 					<span class="bd-lane__name">{ LaneNames[i] }</span>
 					<span class="bd-lane__count">{ strconv.Itoa(len(lane)) }<span class="visually-hidden">{ cardsWord(len(lane)) }</span></span>
 				</h3>
-				<ol class="bd-lane__cards" role="list">
+				<ol class={ ClassLaneCards } role="list">
 					for j, c := range lane {
 						<li
 							id={ cardID(c.ID) }
-							class="bd-slot"
+							class={ ClassSlot }
 							data-card={ strconv.FormatInt(c.ID, 10) }
 							data-version={ strconv.FormatInt(c.Version, 10) }
 							data-title={ c.Title }
@@ -70,8 +70,8 @@ templ LanesView(b Board, now time.Time) {
 								style={ "view-transition-name: " + cardID(c.ID) }
 							}
 						>
-							<button type="button" class="bd-card" data-tag={ c.Tag } aria-describedby="board-help">
-								<span class="bd-card__grip" aria-hidden="true"></span>
+							<button type="button" class={ ClassCard } data-tag={ c.Tag } aria-describedby="board-help">
+								<span class={ ClassGrip } aria-hidden="true"></span>
 								<span class="bd-card__title">{ c.Title }</span>
 								<span class="bd-card__meta">
 									<span class="visually-hidden">, </span>

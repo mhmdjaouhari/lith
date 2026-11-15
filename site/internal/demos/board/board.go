@@ -107,9 +107,12 @@ var (
 	how string
 	//go:embed board.css
 	css string
-	//go:embed board.ts
-	script string
 )
+
+// script is the controller and the module dsgen writes beside it.
+//
+//go:embed board.ts ds.gen.ts
+var script embed.FS
 
 // Demo is the board as the site lists it.
 var Demo = demo.Demo{

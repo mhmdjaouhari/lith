@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 // TestTypeCheck runs tsc over the site's TypeScript, lith-ui and the
@@ -38,5 +39,30 @@ func TestTranspile(t *testing.T) {
 	}
 	if _, err := Transpile("bad.ts", "const x: = 1", true); err == nil || !strings.Contains(err.Error(), "bad.ts") {
 		t.Errorf("a syntax error: %v", err)
+	}
+}
+
+// TestBundle checks that a demo's module and what it imports beside it
+// become one module, the import map's modules left as imports.
+func TestBundle(t *testing.T) {
+	fsys := fstest.MapFS{
+		"demo.ts":   {Data: []byte("import { effect } from 'datastar'\nimport { must } from 'lith-ui'\nimport { ClassX, type Roots } from './ds.gen'\nconst r: Roots | null = null\neffect(() => must(document, '.' + ClassX))\nexport { r }\n")},
+		"ds.gen.ts": {Data: []byte("export interface Roots { _x: number }\nexport const ClassX = \"x-thing\"\n")},
+		"bad.ts":    {Data: []byte("import { y } from 'elsewhere'\nconsole.log(y)\n")},
+	}
+	js, err := Bundle(fsys, "demo.ts", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`from "datastar"`, `from "lith-ui"`, `"x-thing"`} {
+		if !strings.Contains(string(js), want) {
+			t.Errorf("no %s in:\n%s", want, js)
+		}
+	}
+	if strings.Contains(string(js), `from "./ds.gen"`) || strings.Contains(string(js), "interface") {
+		t.Errorf("the generated module is not inlined:\n%s", js)
+	}
+	if _, err := Bundle(fsys, "bad.ts", true); err == nil || !strings.Contains(err.Error(), "elsewhere") {
+		t.Errorf("a bare import outside the import map: %v", err)
 	}
 }

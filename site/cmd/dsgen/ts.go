@@ -13,9 +13,15 @@ import (
 // struct and per payload; Roots, the page's signals by the names they are
 // declared under; and Commands, each command's payload by the DOM event
 // that sends it (<slug>-<name>).
-func tsSource(sigs []signals, cmds []command) ([]byte, error) {
+func tsSource(sigs []signals, cmds []command, doms []domConst) ([]byte, error) {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "// %s\n", header)
+	if len(doms) > 0 {
+		b.WriteString("\n// The names of the page's markup that the templates and the controller share (//ds:dom).\n")
+		for _, d := range doms {
+			fmt.Fprintf(&b, "export const %s = %q\n", d.name, d.value)
+		}
+	}
 	var roots []signals
 	for _, s := range sigs {
 		body, err := tsStruct(s.st, "")
