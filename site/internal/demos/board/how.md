@@ -67,11 +67,11 @@ Dropping a card moves nothing on the page. The page sends the move, leaves the c
 		s.op = ''
 		h.pcard = 0
 		s.problem = ''
-		if (!h.drag) aim(-1, 0)
+		if (!st.item) sort.aim(-1, 0)
 	})
 ```
 
-The effect lives in the board's controller, `board.ts`, which TypeScript checks against the same Go struct the page declares its signals from: `s` is `$_board`, typed by the `Signals` struct in `signals.go`, so a misspelt signal fails the type check instead of a page. `h` is the controller's own state, the card in hand and where it would go: signals too, so the effect runs again when they change, but outside the page's, where no patch from the server can reach them.
+The effect lives in the board's controller, `board.ts`, which TypeScript checks against the same Go struct the page declares its signals from: `s` is `$_board`, typed by the `Signals` struct in `signals.go`, so a misspelt signal fails the type check instead of a page. `h` is the controller's own state, and `st` the state of the drag and the keyboard (lith-ui's `sortable`, which the board configures with its lanes and cards): the card in hand and where it would go. Both are signals too, so the effect runs again when they change, but outside the page's, where no patch from the server can reach them.
 
 Both come in one write. The move touches the board's topic and the tab's, the hub renders both views in the same tick, and the site writes a tick's frames to a stream at once, the board first. The faded card and the bar are a style element outside the regions the stream morphs, built from these signals, so no frame takes them away early.
 

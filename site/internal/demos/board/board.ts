@@ -1,15 +1,17 @@
-// The board's controller: the drag, the keyboard and the pending move's
-// looks, on the stage (data-board). It reads the page by the names that
-// dom.go shares with the templates: the lanes carry their index and name,
-// the cards their id, version and title. On a narrow board a lane is a row
-// of cards that wraps, and board.css says so with PropFlow.
+// The board's controller, on the stage (data-board): lith-ui's sortable
+// does the drag and the keyboard over the lanes and cards; the board adds
+// what it says, the move it sends, the pending move and the looks. It
+// reads the page by the names that dom.go shares with the templates: the
+// lanes carry their index and name, the cards their id, version and
+// title. On a narrow board a lane is a row of cards that wraps, and
+// board.css says so with PropFlow.
 //
 // Nothing here moves a card. It moves the page's signals ($_board, typed
 // by Signals from signals.go) and its own, and dispatches the move, typed
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, attr, commands, controller, insertionIndex, local, measured, must, nearest, num, opId, pending, pointerDrag, type Rule, Sheet, signals } from 'lith-ui'
+import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable } from 'lith-ui'
 import {
 	AnimBusy,
 	AnimNudge,
@@ -37,10 +39,7 @@ import {
 	PropTarget,
 	PropWait,
 	type Roots,
-	type Signals,
 } from './ds.gen'
-
-type Mode = Signals['mode']
 
 /** The properties the controller's sheet sets, which board.css reads. */
 type Look = typeof PropLift | typeof PropPick | typeof PropWait | typeof PropBusy | typeof PropNudge | typeof PropTarget | 'anchor-name'
@@ -49,194 +48,56 @@ controller('board', (el, scope) => {
 	// The page's signals: what the page's attributes and the server read.
 	const s = signals<Roots>()._board
 	// The controller's own, reactive for its effects but no part of the
-	// page's signals, which the server could patch: the card in hand (0:
-	// none), its version when it was picked up, the lane and place it came
-	// from; where it would go (lane -1: nowhere) and how many other cards
-	// that lane has; the card of the pending move, and a refused one.
-	const h = local({ drag: 0, seen: 0, from: -1, at: 0, lane: -1, index: 0, n: 0, pcard: 0, nudge: 0 })
+	// page's signals, which the server could patch: the version of the card
+	// in hand when it was picked up, the card of the pending move, and a
+	// refused one.
+	const h = local({ seen: 0, pcard: 0, nudge: 0 })
 	const say = announcer(() => s.say, (t) => (s.say = t))
 	const send = commands<Commands>(el)
+	const marker = must(el, `.${ClassMarker}`)
 
-	const lane = (n: number): HTMLElement => must(el, attr(AttrLane, n))
-	const lanes = (): HTMLElement[] => [...el.querySelectorAll<HTMLElement>(`[${AttrLane}]`)]
-	const card = (id: number): HTMLElement | null => el.querySelector<HTMLElement>(attr(AttrCard, id))
-	const laneOf = (c: HTMLElement): number => {
-		const l = c.closest<HTMLElement>(`[${AttrLane}]`)
-		if (!l) throw new Error('board: a card outside a lane')
-		return num(l, AttrLane)
-	}
-	const indexOf = (c: HTMLElement): number => (c.parentElement ? [...c.parentElement.children].indexOf(c) : 0)
-	const others = (n: number): HTMLElement[] =>
-		[...lane(n).querySelectorAll<HTMLElement>(`[${AttrCard}]`)].filter((c) => num(c, AttrCard) !== (h.drag || h.pcard))
-	const name = (n: number): string => lane(n).getAttribute(AttrLaneName) ?? ''
+	const name = (n: number): string => el.querySelector(attr(AttrLane, n))?.getAttribute(AttrLaneName) ?? ''
 	const title = (c: HTMLElement): string => c.getAttribute(AttrTitle) ?? ''
-	const place = (n: number, index: number, count: number): string => `${name(n)}, ${index + 1} of ${count + 1}`
+	const laneOf = (c: HTMLElement): number => num(c.closest(`[${AttrLane}]`) ?? el, AttrLane)
+	const where = (p: Place): string => `${name(p.group)}, ${p.index + 1} of ${p.count + 1}`
 
-	// aim marks where the card would go: lane -1 is nowhere.
-	const aim = (n: number, index: number): void => {
-		if (n < 0) {
-			h.lane = -1
-			return
-		}
-		const count = others(n).length
-		h.index = Math.max(0, Math.min(index, count))
-		h.n = count
-		h.lane = n
-	}
-
-	// geometry is the lanes' and the cards' boxes, and which lanes wrap,
-	// measured once and kept until a frame, a scroll or a resize may have
-	// moved them: the ghost and the marker, which the drag moves, move
-	// nothing else.
-	const geometry = measured(el, scope, [must(el, `.${ClassGhost}`), must(el, `.${ClassMarker}`)], () => ({
-		bounds: must(el, `.${ClassLanes}`).getBoundingClientRect(),
-		lanes: lanes().map((l) => ({
-			n: num(l, AttrLane),
-			box: l.getBoundingClientRect(),
-			wraps: getComputedStyle(l).getPropertyValue(PropFlow).trim() === '1',
-			cards: [...l.querySelectorAll(`[${AttrCard}]`)].map((c) => ({ id: num(c, AttrCard), box: c.getBoundingClientRect() })),
-		})),
-	}))
-
-	// aimAt aims at the place under the pointer: the nearest lane, before
-	// the first of its other cards below the pointer (or to its right in
-	// a lane that wraps); nowhere well outside the lanes.
-	const aimAt = (x: number, y: number): void => {
-		const g = geometry()
-		const b = g.bounds
-		if (x < b.left - 48 || x > b.right + 48 || y < b.top - 64 || y > b.bottom + 64) {
-			aim(-1, 0)
-			return
-		}
-		const near = nearest(g.lanes, x, y)
-		if (!near) return
-		const moving = h.drag || h.pcard
-		const boxes = near.cards.filter((c) => c.id !== moving).map((c) => c.box)
-		aim(near.n, insertionIndex(boxes, x, y, near.wraps))
-	}
-
-	const lift = (id: number, mode: Mode): void => {
-		const c = card(id)
-		if (!c) return
-		const from = laneOf(c)
-		h.drag = id
-		s.mode = mode
-		h.seen = num(c, AttrVersion)
-		h.from = from
-		h.at = indexOf(c)
-		aim(from, h.at)
-		if (mode === 'keys') say(`Picked up “${title(c)}”: ${place(from, h.at, h.n)}. Arrows choose a place, Space drops it, Escape puts it back.`)
-	}
-
-	const cancel = (tell: boolean): void => {
-		const c = card(h.drag)
-		h.drag = 0
-		s.mode = ''
-		aim(-1, 0)
-		if (tell && c) say(`“${title(c)}” stays in ${name(laneOf(c))}.`)
-	}
-
-	// drop sends the move in hand, with the card's version from when it
-	// was picked up; a card dropped where it was goes back.
-	const drop = (): void => {
-		const c = card(h.drag)
-		const to = h.lane
-		const index = h.index
-		if (!c || to < 0 || (to === h.from && index === h.at)) {
-			cancel(true)
-			return
-		}
-		const move = { op: opId(), card: h.drag, lane: to, index, seen: h.seen }
-		h.pcard = h.drag
-		h.drag = 0
-		s.mode = ''
-		s.problem = ''
-		s.op = move.op
-		say(`Moving “${title(c)}” to ${name(to)}.`)
-		send('board-move', move)
-	}
-
-	// walk moves the focus from card to card with the arrows.
-	const walk = (c: HTMLElement, key: string): void => {
-		let n = laneOf(c)
-		const i = indexOf(c)
-		let next: Element | null = null
-		if (key === 'ArrowUp') next = c.previousElementSibling
-		if (key === 'ArrowDown') next = c.nextElementSibling
-		if (key === 'ArrowLeft' || key === 'ArrowRight') {
-			const step = key === 'ArrowLeft' ? -1 : 1
-			for (n += step; !next && n >= 0 && el.querySelector(attr(AttrLane, n)); n += step) {
-				const cards = lane(n).querySelectorAll(`[${AttrCard}]`)
-				next = cards[Math.min(i, cards.length - 1)] ?? null
-			}
-		}
-		next?.querySelector('button')?.focus()
-	}
-
-	// The pointer: the main button of a mouse or pen anywhere on a card, a
-	// finger on its grip (the rest of the card scrolls the page).
-	const drag = pointerDrag(el, scope, {
-		items: `[${AttrCard}]`,
+	const sort = sortable(el, scope, {
+		groups: AttrLane,
+		items: AttrCard,
+		bounds: must(el, `.${ClassLanes}`),
 		handle: `.${ClassGrip}`,
 		ghost: must(el, `.${ClassGhost}`),
 		copy: (c) => must(c, `.${ClassCard}`).cloneNode(true),
+		own: [marker],
+		wraps: (l) => getComputedStyle(l).getPropertyValue(PropFlow).trim() === '1',
+		// One move at a time: none while one is pending.
 		enabled: () => !s.op,
-		pressed: () => {
-			if (s.mode === 'keys') cancel(false)
+		absent: () => h.pcard,
+		lift(c, hold, from) {
+			h.seen = num(c, AttrVersion)
+			if (hold === 'keys') say(`Picked up “${title(c)}”: ${where(from)}. Arrows choose a place, Space drops it, Escape puts it back.`)
 		},
-		lift: (c) => lift(num(c, AttrCard), 'pointer'),
-		aim: aimAt,
-		drop,
-		cancel: () => cancel(false),
+		aimed: (to, home) => say(where(to) + (home ? ', where it is' : '') + '.'),
+		cancel(c, tell) {
+			if (tell && c) say(`“${title(c)}” stays in ${name(laneOf(c))}.`)
+		},
+		// drop sends the move, with the card's version from when it was
+		// picked up; the place stays marked while the move is pending.
+		drop(c, to) {
+			const move = { op: opId(), card: num(c, AttrCard), lane: to.group, index: to.index, seen: h.seen }
+			h.pcard = move.card
+			s.problem = ''
+			s.op = move.op
+			say(`Moving “${title(c)}” to ${name(to.group)}.`)
+			send('board-move', move)
+		},
+		busy: () => say('One move at a time: the last one is on its way.'),
 	})
+	const st = sort.state
 
-	// The keyboard: on a card, Space or Enter picks it up and the arrows go
-	// from card to card; picked up, the arrows choose a place, Space or
-	// Enter drops it there and Escape or Tab puts it back.
-	scope.listen(el, 'keydown', (evt) => {
-		const k = evt.key
-		const arrow = k.startsWith('Arrow')
-		if (s.mode === 'pointer') {
-			if (k === 'Escape') {
-				evt.preventDefault()
-				drag.abort()
-			}
-			return
-		}
-		if (s.mode === 'keys') {
-			if (arrow) {
-				evt.preventDefault()
-				const step = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0
-				const n = Math.max(0, Math.min(lanes().length - 1, h.lane + step))
-				aim(n, step ? h.index : h.index + (k === 'ArrowUp' ? -1 : 1))
-				const home = n === h.from && h.index === h.at
-				say(place(n, h.index, h.n) + (home ? ', where it is' : '') + '.')
-			} else if (k === ' ' || k === 'Enter') {
-				evt.preventDefault()
-				drop()
-			} else if (k === 'Escape' || k === 'Tab') {
-				if (k === 'Escape') evt.preventDefault()
-				cancel(true)
-			}
-			return
-		}
-		const c = evt.target instanceof Element ? evt.target.closest<HTMLElement>(`[${AttrCard}]`) : null
-		if (!c || evt.altKey || evt.ctrlKey || evt.metaKey) return
-		if (k === ' ' || k === 'Enter') {
-			evt.preventDefault()
-			if (s.op) say('One move at a time: the last one is on its way.')
-			else lift(num(c, AttrCard), 'keys')
-		} else if (arrow) {
-			evt.preventDefault()
-			walk(c, k)
-		}
-	})
-
-	// A card picked up from the keyboard goes back when the focus goes
-	// elsewhere: a click outside the board, another window.
-	scope.listen(el, 'focusout', (evt) => {
-		const to = evt.relatedTarget
-		if (s.mode === 'keys' && !(to instanceof Node && el.contains(to))) cancel(true)
+	// The page shows how a card is held: the stage's class, the ghost.
+	scope.effect(() => {
+		s.mode = st.hold
 	})
 
 	// The pending move ends on its outcome (settle, below), a request that
@@ -249,7 +110,7 @@ controller('board', (el, scope) => {
 		end: () => {
 			s.op = ''
 			h.pcard = 0
-			if (!h.drag) aim(-1, 0)
+			if (!st.item) sort.aim(-1, 0)
 		},
 		down: 'That move did not reach the server. Try again in a moment.',
 		failed: 'That did not work. Try again.',
@@ -273,7 +134,7 @@ controller('board', (el, scope) => {
 		s.op = ''
 		h.pcard = 0
 		s.problem = ''
-		if (!h.drag) aim(-1, 0)
+		if (!st.item) sort.aim(-1, 0)
 	})
 
 	// looks is the style of the card in hand (--bd-lift under the pointer,
@@ -287,24 +148,23 @@ controller('board', (el, scope) => {
 	// lane's last card, or at the top of an empty lane (the anchor), and
 	// stays hidden while the place is the card's own.
 	const sheet = new Sheet<Look>(scope)
-	const marker = must(el, `.${ClassMarker}`)
 	scope.effect(() => {
 		const rules: Rule<Look>[] = []
 		const card = (id: number): string => attr(AttrCard, id)
-		if (h.drag) rules.push([card(h.drag), s.mode === 'keys' ? { [PropPick]: 1 } : { [PropLift]: 1 }])
+		if (st.item) rules.push([card(st.item), st.hold === 'keys' ? { [PropPick]: 1 } : { [PropLift]: 1 }])
 		if (h.pcard) rules.push([card(h.pcard), { [PropWait]: 1, [PropBusy]: AnimBusy }])
 		if (h.nudge) rules.push([card(h.nudge), { [PropNudge]: AnimNudge }])
 		let on = false
 		let edge = false
-		if (h.lane >= 0) {
-			const lane = attr(AttrLane, h.lane)
+		if (st.group >= 0) {
+			const lane = attr(AttrLane, st.group)
 			rules.push([lane, { [PropTarget]: 1 }])
-			on = !(h.drag && h.lane === h.from && h.index === h.at)
-			if (on && h.n === 0) rules.push([`${lane} .${ClassLaneCards}`, { 'anchor-name': PropSlot }])
+			on = !(st.item && st.group === st.from && st.index === st.at)
+			if (on && st.count === 0) rules.push([`${lane} .${ClassLaneCards}`, { 'anchor-name': PropSlot }])
 			else if (on) {
-				edge = h.index >= h.n
-				const of = `of :not(${card(h.drag || h.pcard)})`
-				rules.push([`${lane} .${ClassSlot}:${edge ? `nth-last-child(1 ${of})` : `nth-child(${h.index + 1} ${of})`}`, { 'anchor-name': PropSlot }])
+				edge = st.index >= st.count
+				const of = `of :not(${card(st.item || h.pcard)})`
+				rules.push([`${lane} .${ClassSlot}:${edge ? `nth-last-child(1 ${of})` : `nth-child(${st.index + 1} ${of})`}`, { 'anchor-name': PropSlot }])
 			}
 		}
 		sheet.set(rules)

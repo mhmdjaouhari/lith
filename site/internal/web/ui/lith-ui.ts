@@ -122,6 +122,225 @@ export function announcer(get: () => string, set: (text: string) => void): (text
 	return (text) => set(get() === text ? text + ' ' : text)
 }
 
+/** How an item is held: not at all, by a pointer, or from the keyboard. */
+export type Hold = '' | 'pointer' | 'keys'
+
+/** A place in a group: its index there, among count other items. */
+export interface Place {
+	group: number
+	index: number
+	count: number
+}
+
+export interface SortableOptions {
+	/** The attribute that holds each group's index, on the group. */
+	groups: `data-${string}`
+	/** The attribute that holds each item's id (a number above 0), on the item, a child of its group's list. */
+	items: `data-${string}`
+	/** The groups' box: a pointer well outside it aims nowhere. */
+	bounds: HTMLElement
+	/** A touch picks an item up by this part of it only; the rest scrolls the page. */
+	handle?: string
+	/** The element that follows the pointer, and what of the item it shows. */
+	ghost: HTMLElement
+	copy?: (item: HTMLElement) => Node
+	/** Elements besides the ghost that the controller changes while it drags (a marker): their changes move nothing. */
+	own?: readonly Element[]
+	/** Whether a group is a row that wraps, rather than a column. */
+	wraps?(group: HTMLElement): boolean
+	/** False keeps both the pointer and the keyboard from picking an item up. */
+	enabled?(): boolean
+	/** An item that counts as gone from its group, such as one whose move is pending; 0: none. */
+	absent?(): number
+	/** Called when an item is picked up, with where it is. */
+	lift?(item: HTMLElement, hold: Hold, from: Place): void
+	/** Called when the keyboard aims somewhere, home true where the item already is. */
+	aimed?(to: Place, home: boolean): void
+	/** Called when the item goes back where it was; tell: the keyboard put it back. */
+	cancel?(item: HTMLElement | null, tell: boolean): void
+	/** Called when the item is dropped somewhere else. The aim stays until aim(-1, 0). */
+	drop(item: HTMLElement, to: Place): void
+	/** Called when the keyboard tries to pick an item up while enabled is false. */
+	busy?(): void
+}
+
+export interface Sortable {
+	/**
+	 * The item held (0: none), how, the group and index it came from, and
+	 * where it would go: group -1 is nowhere, count is how many other
+	 * items that group has. Signals: an effect that reads them runs again.
+	 */
+	readonly state: { item: number; hold: Hold; from: number; at: number; group: number; index: number; count: number }
+	/** Aims at index in group, clamped to it; group -1 aims nowhere. */
+	aim(group: number, index: number): void
+}
+
+/**
+ * Lists of items in groups that a person sorts with a pointer or the
+ * keyboard: the board's cards in lanes. On an item, Space or Enter picks
+ * it up and the arrows move the focus from item to item; picked up, the
+ * arrows choose a place, Space or Enter drops it, Escape or Tab puts it
+ * back, as does the focus leaving el. A pointer drags it (pointerDrag).
+ * Nothing moves an item: sortable keeps where it would go, and the
+ * caller sends the move (drop) and draws the state (an effect).
+ */
+export function sortable(el: HTMLElement, scope: Scope, o: SortableOptions): Sortable {
+	const st = local({ item: 0, hold: '' as Hold, from: -1, at: 0, group: -1, index: 0, count: 0 })
+	const gsel = `[${o.groups}]`
+	const isel = `[${o.items}]`
+	const groups = (): HTMLElement[] => [...el.querySelectorAll<HTMLElement>(gsel)]
+	const group = (n: number): HTMLElement | null => el.querySelector<HTMLElement>(attr(o.groups, n))
+	const item = (id: number): HTMLElement | null => (id ? el.querySelector<HTMLElement>(attr(o.items, id)) : null)
+	const groupOf = (it: HTMLElement): number => {
+		const g = it.closest<HTMLElement>(gsel)
+		if (!g) throw new Error('lith-ui: an item outside a group')
+		return num(g, o.groups)
+	}
+	const indexOf = (it: HTMLElement): number => (it.parentElement ? [...it.parentElement.children].indexOf(it) : 0)
+	const gone = (): number => st.item || (o.absent?.() ?? 0)
+	const others = (n: number): HTMLElement[] => [...(group(n)?.querySelectorAll<HTMLElement>(isel) ?? [])].filter((it) => num(it, o.items) !== gone())
+	const place = (): Place => ({ group: st.group, index: st.index, count: st.count })
+	const enabled = (): boolean => o.enabled?.() ?? true
+
+	const aim = (n: number, index: number): void => {
+		if (n < 0 || !group(n)) {
+			st.group = -1
+			return
+		}
+		const count = others(n).length
+		st.index = Math.max(0, Math.min(index, count))
+		st.count = count
+		st.group = n
+	}
+
+	// The groups' and items' boxes, measured once and kept until a frame, a
+	// scroll or a resize may have moved them.
+	const geometry = measured(el, scope, [o.ghost, ...(o.own ?? [])], () => ({
+		bounds: o.bounds.getBoundingClientRect(),
+		groups: groups().map((g) => ({
+			n: num(g, o.groups),
+			box: g.getBoundingClientRect(),
+			wraps: o.wraps?.(g) ?? false,
+			items: [...g.querySelectorAll(isel)].map((it) => ({ id: num(it, o.items), box: it.getBoundingClientRect() })),
+		})),
+	}))
+	const aimAt = (x: number, y: number): void => {
+		const g = geometry()
+		const b = g.bounds
+		if (x < b.left - 48 || x > b.right + 48 || y < b.top - 64 || y > b.bottom + 64) {
+			aim(-1, 0)
+			return
+		}
+		const near = nearest(g.groups, x, y)
+		if (!near) return
+		const boxes = near.items.filter((it) => it.id !== gone()).map((it) => it.box)
+		aim(near.n, insertionIndex(boxes, x, y, near.wraps))
+	}
+
+	const lift = (it: HTMLElement, hold: Hold): void => {
+		const from = groupOf(it)
+		st.item = num(it, o.items)
+		st.hold = hold
+		st.from = from
+		st.at = indexOf(it)
+		aim(from, st.at)
+		o.lift?.(it, hold, place())
+	}
+	const cancel = (tell: boolean): void => {
+		const it = item(st.item)
+		st.item = 0
+		st.hold = ''
+		aim(-1, 0)
+		o.cancel?.(it, tell)
+	}
+	const drop = (): void => {
+		const it = item(st.item)
+		if (!it || st.group < 0 || (st.group === st.from && st.index === st.at)) {
+			cancel(true)
+			return
+		}
+		const to = place()
+		st.item = 0
+		st.hold = ''
+		o.drop(it, to)
+	}
+	const walk = (it: HTMLElement, key: string): void => {
+		let n = groupOf(it)
+		const i = indexOf(it)
+		let next: Element | null = null
+		if (key === 'ArrowUp') next = it.previousElementSibling
+		if (key === 'ArrowDown') next = it.nextElementSibling
+		if (key === 'ArrowLeft' || key === 'ArrowRight') {
+			const step = key === 'ArrowLeft' ? -1 : 1
+			for (n += step; !next && n >= 0 && group(n); n += step) {
+				const items = group(n)?.querySelectorAll(isel) ?? []
+				next = items[Math.min(i, items.length - 1)] ?? null
+			}
+		}
+		const target = next?.querySelector<HTMLElement>('button, [tabindex]') ?? (next instanceof HTMLElement ? next : null)
+		target?.focus()
+	}
+
+	const drag = pointerDrag(el, scope, {
+		items: isel,
+		...(o.handle ? { handle: o.handle } : {}),
+		ghost: o.ghost,
+		...(o.copy ? { copy: o.copy } : {}),
+		enabled,
+		pressed: () => {
+			if (st.hold === 'keys') cancel(false)
+		},
+		lift: (it) => lift(it, 'pointer'),
+		aim: aimAt,
+		drop,
+		cancel: () => cancel(false),
+	})
+
+	scope.listen(el, 'keydown', (evt) => {
+		const k = evt.key
+		const arrow = k.startsWith('Arrow')
+		if (st.hold === 'pointer') {
+			if (k === 'Escape') {
+				evt.preventDefault()
+				drag.abort()
+			}
+			return
+		}
+		if (st.hold === 'keys') {
+			if (arrow) {
+				evt.preventDefault()
+				const step = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0
+				const n = Math.max(0, Math.min(groups().length - 1, st.group + step))
+				aim(n, step ? st.index : st.index + (k === 'ArrowUp' ? -1 : 1))
+				o.aimed?.(place(), n === st.from && st.index === st.at)
+			} else if (k === ' ' || k === 'Enter') {
+				evt.preventDefault()
+				drop()
+			} else if (k === 'Escape' || k === 'Tab') {
+				if (k === 'Escape') evt.preventDefault()
+				cancel(true)
+			}
+			return
+		}
+		const it = evt.target instanceof Element ? evt.target.closest<HTMLElement>(isel) : null
+		if (!it || evt.altKey || evt.ctrlKey || evt.metaKey) return
+		if (k === ' ' || k === 'Enter') {
+			evt.preventDefault()
+			if (enabled()) lift(it, 'keys')
+			else o.busy?.()
+		} else if (arrow) {
+			evt.preventDefault()
+			walk(it, k)
+		}
+	})
+	scope.listen(el, 'focusout', (evt) => {
+		const to = evt.relatedTarget
+		if (st.hold === 'keys' && !(to instanceof Node && el.contains(to))) cancel(true)
+	})
+
+	return { state: st, aim }
+}
+
 /** A rule of a Sheet: a selector and the properties it sets, P's only. */
 export type Rule<P extends string> = readonly [selector: string, props: Partial<Record<P, string | number>>]
 
