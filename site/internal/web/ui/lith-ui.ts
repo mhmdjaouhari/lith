@@ -56,6 +56,14 @@ export class Scope {
  * Mounts setup on every element with data-<name>, once the element's
  * other attributes, its data-signals first, have applied. What setup
  * adds to its scope goes with the element.
+ *
+ * Why an attribute plugin and not a light-DOM Rocket component: Rocket
+ * applies Datastar again to its host's whole subtree after every morph
+ * inside it, which reruns the subtree's data-init (the board's hello went
+ * out with every frame) and, measured on the board (TestBoardStageCost,
+ * 40 moves), cost a watching tab about 3 times the script time, 9 ms a
+ * move against 3.3, with 5 times the re-scans. The plugin leaves the
+ * server's children to the morph alone.
  */
 export function controller(name: string, setup: (el: HTMLElement, scope: Scope) => void): void {
 	attribute({
