@@ -2,10 +2,12 @@
  * transitions' rules follow at the end, outside the scope.
  *
  * The page's own state reaches the cards through custom properties that
- * the page's style element sets by id (expr.go, looks): --bd-lift on a card
- * dragged by the pointer, --bd-pick on one picked up from the keyboard,
- * --bd-wait and --bd-busy on a card whose move waits for its frame,
- * --bd-nudge on a refused one, --bd-target on the lane it would go to. */
+ * the board's controller sets in a sheet of its own (board.ts, looks,
+ * whose Look type lists them): --bd-lift on a card dragged by the
+ * pointer, --bd-pick on one picked up from the keyboard, --bd-wait and
+ * --bd-busy on a card whose move waits for its frame, --bd-nudge on a
+ * refused one, --bd-target on the lane it would go to; --bd-on and
+ * --bd-edge on the marker itself. */
 
 /* A lane lights up as a drag reaches it, and fades as it leaves. */
 @property --bd-target {

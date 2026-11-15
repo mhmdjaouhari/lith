@@ -122,6 +122,39 @@ export function announcer(get: () => string, set: (text: string) => void): (text
 	return (text) => set(get() === text ? text + ' ' : text)
 }
 
+/** A rule of a Sheet: a selector and the properties it sets, P's only. */
+export type Rule<P extends string> = readonly [selector: string, props: Partial<Record<P, string | number>>]
+
+/**
+ * A stylesheet a controller owns, adopted by the document while its scope
+ * lasts, for looks the page's state gives elements that the stream morphs:
+ * a frame resets what a script sets on such an element (its style
+ * attribute, its classes), or replaces the element, while a rule matches
+ * whatever element the frame brings. P names the properties it may set,
+ * so the CSS that reads them and the controller agree on a list.
+ */
+export class Sheet<P extends `--${string}` | 'anchor-name'> {
+	#sheet = new CSSStyleSheet()
+
+	constructor(scope: Scope) {
+		document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.#sheet]
+		scope.defer(() => {
+			document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== this.#sheet)
+		})
+	}
+
+	/** Replaces the sheet's rules. */
+	set(rules: readonly Rule<P>[]): void {
+		const css = rules.map(([sel, props]) => `${sel}{${Object.entries(props).map(([k, v]) => `${k}:${String(v)}`).join(';')}}`)
+		this.#sheet.replaceSync(css.join('\n'))
+	}
+}
+
+/** The selector of the elements whose attribute name is value, escaped. */
+export function attr(name: `data-${string}`, value: string | number): string {
+	return `[${name}="${CSS.escape(String(value))}"]`
+}
+
 /** The signals of a pending op (Go: demo.OpSignals), which a demo's signals embed. */
 export interface OpSignals {
 	/** The op waiting for its ack, "" for none. */

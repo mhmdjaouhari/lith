@@ -23,7 +23,6 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		{ post... }
 	>
 		@meStyle(me)
-		<style data-bd-looks></style>
 		<span hidden data-init={ hello } data-on:datastar-fetch={ helloAgain }></span>
 		<div class="bd__top">
 			@Here(people)

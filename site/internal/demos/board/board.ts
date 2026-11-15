@@ -9,10 +9,13 @@
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, commands, controller, insertionIndex, local, must, nearest, num, opId, pending, pointerDrag, signals } from 'lith-ui'
+import { announcer, attr, commands, controller, insertionIndex, local, must, nearest, num, opId, pending, pointerDrag, type Rule, Sheet, signals } from 'lith-ui'
 import type { Commands, Roots, Signals } from './ds.gen'
 
 type Mode = Signals['mode']
+
+/** The properties the controller's sheet sets, which board.css reads. */
+type Look = '--bd-lift' | '--bd-pick' | '--bd-wait' | '--bd-busy' | '--bd-nudge' | '--bd-target' | 'anchor-name'
 
 controller('board', (el, scope) => {
 	// The page's signals: what the page's attributes and the server read.
@@ -230,31 +233,36 @@ controller('board', (el, scope) => {
 	// looks is the style of the card in hand (--bd-lift under the pointer,
 	// which leaves a hole behind its ghost; --bd-pick from the keyboard,
 	// which rises), of a card pending or refused, and of the place the card
-	// would go. It lives outside the regions the stream morphs, so no frame
-	// takes it away. It sets custom properties and the marker's anchor;
-	// board.css draws them. The marker sits above the card that would
-	// follow the moved one, below the lane's last card, or at the top of an
-	// empty lane, and stays hidden while the place is the card's own.
-	const style = must<HTMLStyleElement>(el, 'style[data-bd-looks]')
+	// would go; board.css draws them. The cards and lanes are the stream's,
+	// which morphs them with every move, so their looks are rules of a
+	// sheet the controller owns, which match whatever elements a frame
+	// brings. The marker is the stage's own: its properties are set on it.
+	// It sits above the card that would follow the moved one, below the
+	// lane's last card, or at the top of an empty lane (the anchor), and
+	// stays hidden while the place is the card's own.
+	const sheet = new Sheet<Look>(scope)
+	const marker = must(el, '.bd-marker')
 	scope.effect(() => {
-		const rules: string[] = []
-		if (h.drag) rules.push(`#board-card-${h.drag}{${s.mode === 'keys' ? '--bd-pick:1' : '--bd-lift:1'}}`)
-		if (h.pcard) rules.push(`#board-card-${h.pcard}{--bd-wait:1;--bd-busy:bd-busy}`)
-		if (h.nudge) rules.push(`#board-card-${h.nudge}{--bd-nudge:bd-nudge}`)
+		const rules: Rule<Look>[] = []
+		const card = (id: number): string => attr('data-card', id)
+		if (h.drag) rules.push([card(h.drag), s.mode === 'keys' ? { '--bd-pick': 1 } : { '--bd-lift': 1 }])
+		if (h.pcard) rules.push([card(h.pcard), { '--bd-wait': 1, '--bd-busy': 'bd-busy' }])
+		if (h.nudge) rules.push([card(h.nudge), { '--bd-nudge': 'bd-nudge' }])
+		let on = false
+		let edge = false
 		if (h.lane >= 0) {
-			const at = `[data-lane="${h.lane}"]`
-			rules.push(`${at}{--bd-target:1}`)
-			const home = h.drag && h.lane === h.from && h.index === h.at
-			if (!home) {
-				const last = h.index >= h.n
-				if (h.n === 0) rules.push(`${at} .bd-lane__cards{anchor-name:--bd-slot}.bd-marker{--bd-on:1;--bd-edge:0}`)
-				else
-					rules.push(
-						`${at} .bd-slot:nth-${last ? 'last-child(1' : `child(${h.index + 1}`} of :not(#board-card-${h.drag || h.pcard})){anchor-name:--bd-slot}` +
-							`.bd-marker{--bd-on:1;--bd-edge:${last ? 1 : 0}}`,
-					)
+			const lane = attr('data-lane', h.lane)
+			rules.push([lane, { '--bd-target': 1 }])
+			on = !(h.drag && h.lane === h.from && h.index === h.at)
+			if (on && h.n === 0) rules.push([`${lane} .bd-lane__cards`, { 'anchor-name': '--bd-slot' }])
+			else if (on) {
+				edge = h.index >= h.n
+				const of = `of :not(${card(h.drag || h.pcard)})`
+				rules.push([`${lane} .bd-slot:${edge ? `nth-last-child(1 ${of})` : `nth-child(${h.index + 1} ${of})`}`, { 'anchor-name': '--bd-slot' }])
 			}
 		}
-		style.textContent = rules.join('')
+		sheet.set(rules)
+		marker.style.setProperty('--bd-on', on ? '1' : '0')
+		marker.style.setProperty('--bd-edge', edge ? '1' : '0')
 	})
 })

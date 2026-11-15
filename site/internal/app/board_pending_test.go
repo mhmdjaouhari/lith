@@ -38,7 +38,7 @@ func TestBoardPendingAcrossAReconnect(t *testing.T) {
 		boardPress(t, p, "ArrowRight")
 		boardPress(t, p, " ")
 	}
-	const waiting = `document.querySelector('style[data-bd-looks]').textContent.includes('--bd-wait')`
+	const waiting = `[...document.querySelectorAll('[data-card]')].some((c) => getComputedStyle(c).getPropertyValue('--bd-wait').trim() === '1')`
 	ended := func(problem string) string {
 		return `!(` + waiting + `) && document.querySelector('.bd .is-problem').textContent === '` + problem + `'`
 	}
