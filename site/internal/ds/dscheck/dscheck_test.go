@@ -52,6 +52,34 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+func TestCheckCSS(t *testing.T) {
+	page := `<div id="x-lanes" class="x x-lane" data-card="1" style="--x-h: 3"><p class="x__name"></p></div>`
+	css := `/* .x-gone in a comment */
+		@scope ([data-card]) {
+			.x { --x-on: 1; color: var(--x-on); hue: var(--x-h); width: var(--x-w) }
+			.x-lane { & .x__name { opacity: var(--lith-o) } }
+			@container (width < 30rem) { .x-lane { gap: 0.5rem } }
+			#x-lanes, #x-gone, .x-typo, .other, [data-fresh] { color: #fff }
+		}
+		@keyframes x-spin { from { opacity: 0 } 50% { opacity: .5 } to { opacity: 1 } }`
+	errs := CheckCSS(css, "x", "x", map[string]string{"PropW": "--x-w"}, page)
+	var got []string
+	for _, e := range errs {
+		got = append(got, e.Error())
+	}
+	want := []string{
+		"the CSS styles #x-gone, which no element is",
+		"the CSS styles .x-typo, which no element has",
+		"the CSS styles [data-fresh], which no element has",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if errs := CheckCSS(`.x { color: var(--x-typo) }`, "x", "x", nil, page); len(errs) != 1 || !strings.Contains(errs[0].Error(), "reads --x-typo") {
+		t.Errorf("an unset property: %v", errs)
+	}
+}
+
 func TestCheckRefs(t *testing.T) {
 	page := `<p id="help">h</p><label for="name">n</label><input id="name" aria-describedby="help hint"><section aria-labelledby="head"></section>`
 	errs := CheckRefs(page)

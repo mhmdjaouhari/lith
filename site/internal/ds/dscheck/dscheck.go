@@ -14,6 +14,7 @@ package dscheck
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -314,6 +315,131 @@ func CheckDOM(page, css string, names map[string]string) []error {
 		}
 	}
 	return errs
+}
+
+var (
+	cssComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	cssRead    = regexp.MustCompile(`var\(\s*(--[a-zA-Z0-9_-]+)`)
+	cssSet     = regexp.MustCompile(`(--[a-zA-Z0-9_-]+)\s*:`)
+	cssClass   = regexp.MustCompile(`\.([a-zA-Z_][a-zA-Z0-9_-]*)`)
+	cssID      = regexp.MustCompile(`#([a-zA-Z][a-zA-Z0-9_-]*)`)
+	cssAttr    = regexp.MustCompile(`\[\s*(data-[a-z0-9-]+)`)
+)
+
+// CheckCSS reports what a demo's stylesheet names of its own that nothing
+// gives it, for the names that begin with prefix ("bd": the custom
+// properties --bd-…, the classes bd, bd-… and bd__…) and with slug + "-"
+// (the ids board-…): a custom property it reads that neither css, a
+// //ds:dom Prop… (names, which a controller or the server sets) nor an
+// inline style of pages sets; a class, an id or a data- attribute it styles
+// that no element of pages has. Each is a rule that never applies or a
+// value that falls back to its default without an error. pages should show
+// every state the stylesheet styles.
+func CheckCSS(css, prefix, slug string, names map[string]string, pages ...string) []error {
+	css = cssComment.ReplaceAllString(css, "")
+	var page markup
+	for i, p := range pages {
+		m, err := parse(p)
+		if err != nil {
+			return []error{err}
+		}
+		if i == 0 {
+			page = m
+			continue
+		}
+		for k := range m.attrs {
+			page.attrs[k] = true
+		}
+		for k := range m.classes {
+			page.classes[k] = true
+		}
+		for k := range m.ids {
+			page.ids[k] = true
+		}
+	}
+	set := map[string]bool{}
+	for _, m := range cssSet.FindAllStringSubmatch(css, -1) {
+		set[m[1]] = true
+	}
+	for name, v := range names {
+		if strings.HasPrefix(name, "Prop") {
+			set[v] = true
+		}
+	}
+	for _, p := range pages {
+		for _, m := range cssSet.FindAllStringSubmatch(styleAttrs(p), -1) {
+			set[m[1]] = true
+		}
+	}
+	own := func(name string) bool {
+		return name == prefix || strings.HasPrefix(name, prefix+"-") || strings.HasPrefix(name, prefix+"__")
+	}
+	var errs []error
+	seen := map[string]bool{}
+	report := func(key, msg string) {
+		if !seen[key] {
+			seen[key] = true
+			errs = append(errs, errors.New(msg))
+		}
+	}
+	for _, m := range cssRead.FindAllStringSubmatch(css, -1) {
+		if v := m[1]; strings.HasPrefix(v, "--"+prefix+"-") && !set[v] {
+			report(v, fmt.Sprintf("the CSS reads %s, which nothing sets", v))
+		}
+	}
+	// Selectors only: the text before each block's brace.
+	for _, sel := range selectors(css) {
+		for _, m := range cssClass.FindAllStringSubmatch(sel, -1) {
+			if c := m[1]; own(c) && !page.classes[c] {
+				report("."+c, fmt.Sprintf("the CSS styles .%s, which no element has", c))
+			}
+		}
+		for _, m := range cssID.FindAllStringSubmatch(sel, -1) {
+			if id := m[1]; strings.HasPrefix(id, slug+"-") && !page.ids[id] {
+				report("#"+id, fmt.Sprintf("the CSS styles #%s, which no element is", id))
+			}
+		}
+		for _, m := range cssAttr.FindAllStringSubmatch(sel, -1) {
+			if a := m[1]; !page.attrs[a] {
+				report("["+a, fmt.Sprintf("the CSS styles [%s], which no element has", a))
+			}
+		}
+	}
+	sort.Slice(errs, func(i, j int) bool { return errs[i].Error() < errs[j].Error() })
+	return errs
+}
+
+// selectors returns the selectors of css: the text before each {, but the
+// at-rules' preludes (@container, @media, @keyframes...) and keyframe
+// selectors (from, 50%).
+func selectors(css string) []string {
+	var out []string
+	for _, part := range strings.Split(css, "{") {
+		if i := strings.LastIndexAny(part, ";}"); i >= 0 {
+			part = part[i+1:]
+		}
+		part = strings.TrimSpace(part)
+		if part == "" || strings.HasPrefix(part, "@") || part == "from" || part == "to" || strings.HasSuffix(part, "%") {
+			continue
+		}
+		out = append(out, part)
+	}
+	return out
+}
+
+var styleAttr = regexp.MustCompile(`style="([^"]*)"`)
+
+// styleAttrs returns the inline styles of page, and its <style> elements'
+// text, joined.
+func styleAttrs(page string) string {
+	var b strings.Builder
+	for _, m := range styleAttr.FindAllStringSubmatch(page, -1) {
+		b.WriteString(m[1] + ";")
+	}
+	for _, s := range regexp.MustCompile(`(?s)<style[^>]*>(.*?)</style>`).FindAllStringSubmatch(page, -1) {
+		b.WriteString(s[1])
+	}
+	return b.String()
 }
 
 // inline is a Datastar attribute of a template with a literal value that

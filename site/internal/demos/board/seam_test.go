@@ -2,6 +2,7 @@ package board
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -51,6 +52,40 @@ func TestSeam(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, err := range errs {
+		t.Error(err)
+	}
+}
+
+// TestCSS checks board.css against the pages it styles, in each state it
+// styles: every --bd- property it reads is set, and every class, id and
+// data- attribute it styles is on a page.
+func TestCSS(t *testing.T) {
+	now := time.Now()
+	moved := Card{ID: 2, Title: "Another", Tag: "docs", Lane: 1, Version: 1, MovedBy: "a1b2c3d4", MovedAt: now, Shifted: 3}
+	b := Board{Version: 3, Last: moved, LastBy: "a1b2c3d4", MovedAt: now}
+	b.Lanes[0] = []Card{{ID: 1, Title: "A card", Tag: "ops", Version: 2, Shifted: 2}}
+	b.Lanes[1] = []Card{moved}
+	var crowd []Person
+	for i := range Shown + 2 {
+		crowd = append(crowd, Person{Avatar: AvatarOf(fmt.Sprintf("%08x", i)), Tabs: 1 + i%2})
+	}
+	busy := Numbers{Last: Tick{Moves: 2, Frames: 3, At: now}, PerSecond: 1.5, Series: make([]int, seriesOf)}
+	var pages []string
+	for _, c := range []templ.Component{
+		Stage(b, busy, crowd, "a1b2c3d4", now),
+		Stage(Board{}, Numbers{Series: make([]int, seriesOf)}, nil, "", now),
+		Embed(b, busy, crowd, now),
+		Outcome(TabState{Op: "o", Refusal: "refused"}),
+	} {
+		var sb strings.Builder
+		if err := c.Render(context.Background(), &sb); err != nil {
+			t.Fatal(err)
+		}
+		// The site puts each demo in its island (web.Server), which board.css
+		// scopes its rules to.
+		pages = append(pages, `<div class="island" data-demo="`+Slug+`">`+sb.String()+`</div>`)
+	}
+	for _, err := range dscheck.CheckCSS(css, "bd", Slug, dsDOM, pages...) {
 		t.Error(err)
 	}
 }
