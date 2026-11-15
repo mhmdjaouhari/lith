@@ -43,3 +43,25 @@ export interface AttributePlugin {
 
 /** Registers an attribute plugin. One registered after the page started applies to the elements already there. */
 export function attribute(plugin: AttributePlugin): void
+
+/** What a request of an action (@get, @post...) went through, in the order it may: started, retrying, error, retries-failed, finished. */
+export type FetchType = 'started' | 'finished' | 'error' | 'retrying' | 'retries-failed'
+
+/** The detail of datastar-fetch, which Datastar dispatches on the document for each step of a request. */
+export interface FetchDetail {
+	type: FetchType
+	/** The element whose expression sent the request. */
+	el: HTMLElement
+	/** The step's details; an error's status is a string, such as "429". */
+	argsRaw: Record<string, string | undefined>
+}
+
+/** The signals a patch changed, nested by path, with null for a removed one: the detail of datastar-signal-patch. */
+export type SignalPatch = { [key: string]: SignalPatch | string | number | boolean | null }
+
+declare global {
+	interface DocumentEventMap {
+		'datastar-fetch': CustomEvent<FetchDetail>
+		'datastar-signal-patch': CustomEvent<SignalPatch>
+	}
+}

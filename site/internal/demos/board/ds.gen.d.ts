@@ -5,8 +5,6 @@ export interface Signals {
 	op: string
 	ack: string
 	synced: boolean
-	inflight: number
-	recheck: boolean
 	problem: string
 	v: number
 	drag: number

@@ -12,7 +12,8 @@ import (
 // board, and under it the tab's outcome and the help. The stage itself is
 // never morphed; the regions inside it with ids are the stream's.
 // data-board mounts its controller (board.ts) once its signals are
-// declared; the controller dispatches the moves, which the stage posts.
+// declared; the controller dispatches the moves, which the stage posts,
+// and ends the pending move.
 templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 	<div
 		class="bd"
@@ -20,9 +21,6 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		data-board
 		data-class:is-dragging={ S.Mode.Eq(Pointer) }
 		{ post... }
-		data-on:datastar-fetch={ fetched }
-		data-on-signal-patch={ moving.LostExpr() }
-		data-on-signal-patch-filter={ moving.LostFilter() }
 	>
 		@meStyle(me)
 		<style data-bd-looks></style>

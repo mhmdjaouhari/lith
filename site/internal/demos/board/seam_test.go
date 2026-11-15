@@ -98,7 +98,6 @@ func TestExpressions(t *testing.T) {
 		post["data-on:board-move"].(string): `@post("/cmd/board/move", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`,
 		hello:                               `@post("/cmd/board/hello", {payload: {tab: $_tab}, "retry":"error","retryMaxCount":5})`,
 		S.Mode.Eq(Pointer):                  `$_board.mode === "pointer"`,
-		moving.End:                          `$_board.op = "", $_board.pcard = 0, $_board.drag || ($_board.lane = -1)`,
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)

@@ -31,6 +31,7 @@ export class Scope {
 	/** Adds a listener, run in a batch, removed with the scope. */
 	listen<K extends keyof HTMLElementEventMap>(target: HTMLElement, type: K, fn: (evt: HTMLElementEventMap[K]) => void, opts?: AddEventListenerOptions): void
 	listen<K extends keyof WindowEventMap>(target: Window, type: K, fn: (evt: WindowEventMap[K]) => void, opts?: AddEventListenerOptions): void
+	listen<K extends keyof DocumentEventMap>(target: Document, type: K, fn: (evt: DocumentEventMap[K]) => void, opts?: AddEventListenerOptions): void
 	listen(target: EventTarget, type: string, fn: (evt: Event) => void, opts?: AddEventListenerOptions): void {
 		const run = (evt: Event): void => batch(() => fn(evt))
 		target.addEventListener(type, run, opts)
@@ -98,6 +99,96 @@ export type Exact<D, T> = D & Record<Exclude<keyof D, keyof T>, never>
  */
 export function announcer(get: () => string, set: (text: string) => void): (text: string) => void {
 	return (text) => set(get() === text ? text + ' ' : text)
+}
+
+/** The signals of a pending op (Go: demo.OpSignals), which a demo's signals embed. */
+export interface OpSignals {
+	/** The op waiting for its ack, "" for none. */
+	op: string
+	/** The op the tab's last outcome answers. */
+	ack: string
+	/** The stream brought the tab's row since it (re)connected: the shell sets it false, the tab's view true. */
+	synced: boolean
+	/** The page's line for what went wrong. */
+	problem: string
+}
+
+export interface PendingOptions {
+	/** The demo's signals, and the name they are declared under ('_board'). */
+	signals: OpSignals
+	root: string
+	/** Ends the pending state: clears op, and whatever else the demo keeps of it. */
+	end(): void
+	/** The page's words when a request never got through, when a status came without a notice, when the op was lost to a reconnect. */
+	down: string
+	failed: string
+	lost: string
+	/** The words while a request is retried; none by default. */
+	retrying?: string
+}
+
+/** Opens the page's stream again, as sse.Reconnect has the page do. */
+export function reopenStream(id = 'stream'): void {
+	const s = document.getElementById(id)
+	s?.replaceWith(s.cloneNode(true))
+}
+
+/**
+ * Ends the op the element's requests carry on a signal, never on a clock
+ * (the Go side: demo.Pending, for demos without a controller): its ack,
+ * which the demo's own effect settles; Datastar's retries-failed; an
+ * answer of 400 or another 4xx but 409 and 429, which comes without a
+ * notice; or the stream connecting again with a tab row that does not
+ * ack it, once no request of the op is in flight. Act sends a notice with
+ * every 429 and 5xx but a closed writer's 503, whose stream is ending:
+ * those leave the op to the stream, and so does a 409, a tab without a
+ * stream, whose reconnect decides. When the last request ends after a
+ * reconnect that found no ack, it opens the stream once more, so that a
+ * fresh frame of the tab's row decides. The requests must go out from el,
+ * which no frame removes, so the count cannot leak.
+ */
+export function pending(el: HTMLElement, scope: Scope, o: PendingOptions): void {
+	const s = o.signals
+	let inflight = 0
+	let recheck = false
+	const waiting = (): boolean => s.op !== '' && s.ack !== s.op
+	const fail = (words: string): void => {
+		o.end()
+		s.problem = words
+	}
+	scope.listen(document, 'datastar-fetch', (evt) => {
+		const { type, el: from, argsRaw } = evt.detail
+		if (from !== el) return
+		switch (type) {
+			case 'started':
+				inflight++
+				break
+			case 'finished':
+				inflight = Math.max(0, inflight - 1)
+				if (inflight === 0 && recheck) {
+					recheck = false
+					if (waiting()) reopenStream()
+				}
+				break
+			case 'retrying':
+				if (o.retrying && s.op) s.problem = o.retrying
+				break
+			case 'error': {
+				const status = Number(argsRaw['status'])
+				if (waiting() && status !== 409 && status !== 429 && status < 500) fail(o.failed)
+				break
+			}
+			case 'retries-failed':
+				if (waiting()) fail(o.down)
+				break
+		}
+	})
+	scope.listen(document, 'datastar-signal-patch', (evt) => {
+		const mine = evt.detail[o.root]
+		if (typeof mine !== 'object' || mine === null || mine['synced'] !== true || !waiting()) return
+		if (inflight > 0) recheck = true
+		else fail(o.lost)
+	})
 }
 
 /** A new op id: unique enough for one tab, and what demo.ValidID accepts. */

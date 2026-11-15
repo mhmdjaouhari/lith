@@ -173,12 +173,22 @@ type Pending struct {
 //
 //ds:signals
 type PendingSignals struct {
-	Op       string `json:"op"`       // the op waiting for its ack, "" for none
-	Ack      string `json:"ack"`      // the op the tab's last outcome answers
-	Synced   bool   `json:"synced"`   // the stream brought the tab's row since it (re)connected
-	Inflight int    `json:"inflight"` // the op's requests in flight
-	Recheck  bool   `json:"recheck"`  // a reconnect came while one was in flight
-	Problem  string `json:"problem"`  // the page's line for what went wrong
+	OpSignals
+	Inflight int  `json:"inflight"` // the op's requests in flight
+	Recheck  bool `json:"recheck"`  // a reconnect came while one was in flight
+}
+
+// OpSignals are the signals of a pending op that the page and the server
+// share. A demo whose controller ends its op (lith-ui's pending, in
+// TypeScript) embeds these alone: the controller counts the requests in
+// flight itself.
+//
+//ds:signals
+type OpSignals struct {
+	Op      string `json:"op"`      // the op waiting for its ack, "" for none
+	Ack     string `json:"ack"`     // the op the tab's last outcome answers
+	Synced  bool   `json:"synced"`  // the stream brought the tab's row since it (re)connected
+	Problem string `json:"problem"` // the page's line for what went wrong
 }
 
 // NewPending is the Pending of a demo whose signals sig hold op, ack,

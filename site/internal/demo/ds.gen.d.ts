@@ -5,7 +5,15 @@ export interface PendingSignals {
 	op: string
 	ack: string
 	synced: boolean
+	problem: string
 	inflight: number
 	recheck: boolean
+}
+
+/** The signals of the Go struct OpSignals. */
+export interface OpSignals {
+	op: string
+	ack: string
+	synced: boolean
 	problem: string
 }

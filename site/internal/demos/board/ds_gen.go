@@ -9,7 +9,7 @@ import (
 
 // SignalsRefs are the signals of Signals, each a ds.Ref.
 type SignalsRefs struct {
-	demo.PendingSignalsRefs
+	demo.OpSignalsRefs
 	V     ds.Ref[int64]  // .v
 	Drag  ds.Ref[int64]  // .drag
 	Mode  ds.Ref[Mode]   // .mode
@@ -29,21 +29,21 @@ type SignalsRefs struct {
 // NewSignalsRefs returns the refs of Signals declared under path, such as "_board".
 func NewSignalsRefs(path string) SignalsRefs {
 	return SignalsRefs{
-		PendingSignalsRefs: demo.NewPendingSignalsRefs(path),
-		V:                  ds.NewRef[int64](path + ".v"),
-		Drag:               ds.NewRef[int64](path + ".drag"),
-		Mode:               ds.NewRef[Mode](path + ".mode"),
-		Seen:               ds.NewRef[int64](path + ".seen"),
-		From:               ds.NewRef[int](path + ".from"),
-		At:                 ds.NewRef[int](path + ".at"),
-		Lane:               ds.NewRef[int](path + ".lane"),
-		Index:              ds.NewRef[int](path + ".index"),
-		N:                  ds.NewRef[int](path + ".n"),
-		PCard:              ds.NewRef[int64](path + ".pcard"),
-		AckV:               ds.NewRef[int64](path + ".ackv"),
-		OK:                 ds.NewRef[bool](path + ".ok"),
-		Nudge:              ds.NewRef[int64](path + ".nudge"),
-		Say:                ds.NewRef[string](path + ".say"),
+		OpSignalsRefs: demo.NewOpSignalsRefs(path),
+		V:             ds.NewRef[int64](path + ".v"),
+		Drag:          ds.NewRef[int64](path + ".drag"),
+		Mode:          ds.NewRef[Mode](path + ".mode"),
+		Seen:          ds.NewRef[int64](path + ".seen"),
+		From:          ds.NewRef[int](path + ".from"),
+		At:            ds.NewRef[int](path + ".at"),
+		Lane:          ds.NewRef[int](path + ".lane"),
+		Index:         ds.NewRef[int](path + ".index"),
+		N:             ds.NewRef[int](path + ".n"),
+		PCard:         ds.NewRef[int64](path + ".pcard"),
+		AckV:          ds.NewRef[int64](path + ".ackv"),
+		OK:            ds.NewRef[bool](path + ".ok"),
+		Nudge:         ds.NewRef[int64](path + ".nudge"),
+		Say:           ds.NewRef[string](path + ".say"),
 	}
 }
 

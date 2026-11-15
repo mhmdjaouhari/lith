@@ -8,7 +8,7 @@
 // by Signals from signals.go) and dispatches the move, typed by MoveReq,
 // which the stage posts; the board's next frame moves the card.
 
-import { announcer, commands, controller, insertionIndex, must, nearest, num, opId, pointerDrag, signals } from 'lith-ui'
+import { announcer, commands, controller, insertionIndex, must, nearest, num, opId, pending, pointerDrag, signals } from 'lith-ui'
 import type { Commands, Roots, Signals } from './ds.gen'
 
 type Mode = Signals['mode']
@@ -180,6 +180,24 @@ controller('board', (el, scope) => {
 	scope.listen(el, 'focusout', (evt) => {
 		const to = evt.relatedTarget
 		if (s.mode === 'keys' && !(to instanceof Node && el.contains(to))) cancel(true)
+	})
+
+	// The pending move ends on its outcome (settle, below), a request that
+	// never got through, or a stream that connects again without its ack,
+	// never on a clock.
+	const root = '_board' satisfies keyof Roots
+	pending(el, scope, {
+		signals: s,
+		root,
+		end: () => {
+			s.op = ''
+			s.pcard = 0
+			if (!s.drag) aim(-1, 0)
+		},
+		down: 'That move did not reach the server. Try again in a moment.',
+		failed: 'That did not work. Try again.',
+		lost: 'That move did not go through. Try again.',
+		retrying: 'The server does not answer. Trying again.',
 	})
 
 	// settle ends the pending move once its outcome has come and the board

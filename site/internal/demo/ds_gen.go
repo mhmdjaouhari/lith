@@ -8,22 +8,34 @@ import (
 
 // PendingSignalsRefs are the signals of PendingSignals, each a ds.Ref.
 type PendingSignalsRefs struct {
-	Op       ds.Ref[string] // .op
-	Ack      ds.Ref[string] // .ack
-	Synced   ds.Ref[bool]   // .synced
-	Inflight ds.Ref[int]    // .inflight
-	Recheck  ds.Ref[bool]   // .recheck
-	Problem  ds.Ref[string] // .problem
+	OpSignalsRefs
+	Inflight ds.Ref[int]  // .inflight
+	Recheck  ds.Ref[bool] // .recheck
 }
 
 // NewPendingSignalsRefs returns the refs of PendingSignals declared under path, such as "_board".
 func NewPendingSignalsRefs(path string) PendingSignalsRefs {
 	return PendingSignalsRefs{
-		Op:       ds.NewRef[string](path + ".op"),
-		Ack:      ds.NewRef[string](path + ".ack"),
-		Synced:   ds.NewRef[bool](path + ".synced"),
-		Inflight: ds.NewRef[int](path + ".inflight"),
-		Recheck:  ds.NewRef[bool](path + ".recheck"),
-		Problem:  ds.NewRef[string](path + ".problem"),
+		OpSignalsRefs: NewOpSignalsRefs(path),
+		Inflight:      ds.NewRef[int](path + ".inflight"),
+		Recheck:       ds.NewRef[bool](path + ".recheck"),
+	}
+}
+
+// OpSignalsRefs are the signals of OpSignals, each a ds.Ref.
+type OpSignalsRefs struct {
+	Op      ds.Ref[string] // .op
+	Ack     ds.Ref[string] // .ack
+	Synced  ds.Ref[bool]   // .synced
+	Problem ds.Ref[string] // .problem
+}
+
+// NewOpSignalsRefs returns the refs of OpSignals declared under path, such as "_board".
+func NewOpSignalsRefs(path string) OpSignalsRefs {
+	return OpSignalsRefs{
+		Op:      ds.NewRef[string](path + ".op"),
+		Ack:     ds.NewRef[string](path + ".ack"),
+		Synced:  ds.NewRef[bool](path + ".synced"),
+		Problem: ds.NewRef[string](path + ".problem"),
 	}
 }

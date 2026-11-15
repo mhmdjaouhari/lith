@@ -15,7 +15,7 @@ import "github.com/zweiundeins/lith/site/internal/demo"
 //
 //ds:signals _board S
 type Signals struct {
-	demo.PendingSignals // op is the move waiting for its outcome
+	demo.OpSignals // op is the move waiting for its outcome; board.ts ends it (lith-ui's pending)
 
 	V     int64  `json:"v"`     // the board's version on the page
 	Drag  int64  `json:"drag"`  // the card in hand, 0: none
