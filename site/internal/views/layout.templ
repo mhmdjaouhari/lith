@@ -95,7 +95,9 @@ templ Header(s Shell) {
 	<header class="site-header">
 		<div class="wrap site-header__inner">
 			<a class="brand" href="/" aria-label="lith, home">
-				@Art(logoSVG, "brand__logo")
+				<span class="brand__mark">
+					@Art(logoSVG, "brand__logo")
+				</span>
 				<span class="brand__word">lith</span>
 			</a>
 			<button class="icon-btn menu-button" type="button" aria-label="Menu" data-on:click="$_menu.show()">

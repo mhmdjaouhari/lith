@@ -42,12 +42,38 @@
 		color: var(--lith-text-1);
 		text-decoration: none;
 
+		/* The logo's glow breathes behind it: a soft disc that swells and
+		 * fades. It animates transform and opacity alone, which the
+		 * compositor runs: the page's main thread does nothing while the
+		 * header breathes, where animating --lith-seam-glow on the logo
+		 * restyled and repainted it every frame (TestIdleCost: 86 ms of
+		 * main-thread work a second on an idle demo page, against 5). */
+		& .brand__mark {
+			position: relative;
+			display: grid;
+			isolation: isolate;
+
+			&::before {
+				content: "";
+				position: absolute;
+				inset-block-start: 50%;
+				inset-inline-start: 50%;
+				z-index: -1;
+				inline-size: 3.25rem;
+				aspect-ratio: 1;
+				margin: -1.625rem 0 0 -1.625rem;
+				border-radius: 50%;
+				background: radial-gradient(closest-side, var(--lith-glow-color), transparent);
+				pointer-events: none;
+				animation: glow-breathe 6s ease-in-out infinite alternate;
+			}
+		}
+
 		& .brand__logo {
 			inline-size: auto;
 			block-size: 2.25rem;
 			view-transition-name: logo;
-			filter: drop-shadow(0 0 calc(var(--lith-seam-glow) * 10px) var(--lith-glow-color));
-			animation: breathe 6s ease-in-out infinite alternate;
+			filter: drop-shadow(0 0 calc(var(--lith-seam-glow) * 6px) var(--lith-glow-color));
 		}
 
 		& .brand__word {
@@ -63,8 +89,20 @@
 		}
 	}
 
+	@keyframes glow-breathe {
+		from {
+			transform: scale(0.7);
+			opacity: 0.4;
+		}
+		to {
+			transform: scale(1.1);
+			opacity: 0.95;
+		}
+	}
+
 	/* The seam breathes: --lith-seam-glow is a registered number, so it
-	 * animates, and the halo's opacity and the glow follow it. */
+	 * animates, and the halo's opacity and the glow follow it (the landing
+	 * page's monolith; the header's logo breathes with glow-breathe). */
 	@keyframes breathe {
 		from {
 			--lith-seam-glow: 0.45;
