@@ -100,18 +100,6 @@
 		}
 	}
 
-	/* The seam breathes: --lith-seam-glow is a registered number, so it
-	 * animates, and the halo's opacity and the glow follow it (the landing
-	 * page's monolith; the header's logo breathes with glow-breathe). */
-	@keyframes breathe {
-		from {
-			--lith-seam-glow: 0.45;
-		}
-		to {
-			--lith-seam-glow: 1;
-		}
-	}
-
 	.px-art {
 		& .halo {
 			opacity: calc(0.25 + var(--lith-seam-glow) * 0.75);

@@ -138,7 +138,53 @@
 				block-size: clamp(9rem, 30cqi, 14rem);
 			}
 			filter: drop-shadow(0 0 calc(var(--lith-seam-glow) * 36px) var(--lith-glow-color));
-			animation: breathe 6s ease-in-out infinite alternate;
+		}
+	}
+
+	/* The monolith's glow breathes behind it: a soft ellipse that swells
+	 * and fades, by transform and opacity, which the compositor animates.
+	 * Breathing --lith-seam-glow on the monolith restyled and repainted it
+	 * every frame: 136 ms of main-thread work a second on the idle landing
+	 * page against 5 (TestIdleCost). The glow sits in the stone's grid cell,
+	 * behind it, and sinks with the monolith as the page scrolls (sink,
+	 * below): the element sinks and its ::before breathes, since one
+	 * element with both, a scroll-driven and a timed animation, ran on the
+	 * main thread again (69 ms a second). The stone itself holds still: the
+	 * cursor party measures it (data-cp-anchor). */
+	.hero__art {
+		isolation: isolate;
+	}
+
+	.hero__stone {
+		grid-area: 1 / 1;
+	}
+
+	.hero__glow {
+		position: relative;
+		grid-area: 1 / 1;
+		align-self: stretch;
+		justify-self: center;
+		aspect-ratio: 3 / 4;
+		z-index: -1;
+		pointer-events: none;
+
+		&::before {
+			content: "";
+			position: absolute;
+			inset: -6% 0;
+			background: radial-gradient(closest-side, var(--lith-glow-color), transparent);
+			animation: hero-glow 6s ease-in-out infinite alternate;
+		}
+	}
+
+	@keyframes hero-glow {
+		from {
+			transform: scale(0.8);
+			opacity: 0.35;
+		}
+		to {
+			transform: scale(1.08);
+			opacity: 0.9;
 		}
 	}
 
@@ -433,10 +479,18 @@
 				animation-range: entry 0% cover 28%;
 			}
 
+			/* The stone itself holds still: the cursor party measures it
+			 * (data-cp-anchor). The monolith and its glow sink. */
 			.hero__art svg {
-				animation: breathe 6s ease-in-out infinite alternate, sink linear both;
-				animation-timeline: auto, scroll(root block);
-				animation-range: normal, 0 60vh;
+				animation: sink linear both;
+				animation-timeline: scroll(root block);
+				animation-range: 0 60vh;
+			}
+
+			.hero__glow {
+				animation: sink linear both;
+				animation-timeline: scroll(root block);
+				animation-range: 0 60vh;
 			}
 		}
 	}
