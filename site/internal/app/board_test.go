@@ -192,10 +192,13 @@ func TestBoard(t *testing.T) {
 		boardPress(t, ada, "ArrowRight")
 		boardPress(t, ada, " ")
 		bob.Wait(t, `document.querySelector('#board-card-1')?.closest('[data-lane]')?.dataset.lane === '2'`, 5*time.Second)
+		bob.Eval(t, `(window.__shook = 0, document.addEventListener('animationstart', (e) => { if (e.animationName === 'bd-nudge') window.__shook++ }, true), true)`, nil)
 		boardPress(t, bob, "ArrowRight")
 		boardPress(t, bob, " ")
 		bob.Wait(t, `document.querySelector('#board-outcome.is-refused')?.textContent.includes('moved “Sketch the monolith” first. It is in Done now.')`, 5*time.Second)
 		bob.Wait(t, `getComputedStyle(document.querySelector('#board-card-1')).getPropertyValue('--bd-wait').trim() !== '1'`, 2*time.Second)
+		// The refused card shakes once, and the shake ends with its animation.
+		bob.Wait(t, `window.__shook === 1 && getComputedStyle(document.querySelector('#board-card-1 .bd-card')).getPropertyValue('--bd-nudge').trim() === ''`, 2*time.Second)
 		var outcome string
 		ada.Eval(t, `document.querySelector('#board-outcome').textContent`, &outcome)
 		if !strings.Contains(outcome, "You moved “Sketch the monolith” to Done.") {

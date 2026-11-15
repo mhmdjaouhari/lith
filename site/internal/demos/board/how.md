@@ -56,14 +56,7 @@ Dropping a card moves nothing on the page. The page sends the move, leaves the c
 	scope.effect(() => {
 		const op = s.op
 		if (!op || s.ack !== op || s.v < s.ackv) return
-		const c = h.pcard
-		if (!s.ok) {
-			h.nudge = c
-			const t = setTimeout(() => {
-				if (h.nudge === c) h.nudge = 0
-			}, 900)
-			scope.defer(() => clearTimeout(t))
-		}
+		if (!s.ok) h.nudge = h.pcard
 		s.op = ''
 		h.pcard = 0
 		s.problem = ''

@@ -119,23 +119,24 @@ controller('board', (el, scope) => {
 	})
 
 	// settle ends the pending move once its outcome has come and the board
-	// shows the version that has it. A refused card shakes for a moment.
+	// shows the version that has it. A refused card shakes once (AnimNudge),
+	// and the shake ends with its animation: board.css owns how long it
+	// takes, and reduced motion, which shortens it, ends it at once.
 	scope.effect(() => {
 		const op = s.op
 		if (!op || s.ack !== op || s.v < s.ackv) return
-		const c = h.pcard
-		if (!s.ok) {
-			h.nudge = c
-			const t = setTimeout(() => {
-				if (h.nudge === c) h.nudge = 0
-			}, 900)
-			scope.defer(() => clearTimeout(t))
-		}
+		if (!s.ok) h.nudge = h.pcard
 		s.op = ''
 		h.pcard = 0
 		s.problem = ''
 		if (!st.item) sort.aim(-1, 0)
 	})
+	const shaken = (evt: AnimationEvent): void => {
+		if (evt.animationName === AnimNudge) h.nudge = 0
+	}
+	scope.listen(el, 'animationend', shaken)
+	// A frame that replaces the card mid-shake ends it too.
+	scope.listen(el, 'animationcancel', shaken)
 
 	// looks is the style of the card in hand (--bd-lift under the pointer,
 	// which leaves a hole behind its ghost; --bd-pick from the keyboard,
