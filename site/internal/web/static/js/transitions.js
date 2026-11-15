@@ -8,6 +8,28 @@
 ;(() => {
 	'use strict'
 	const root = document.documentElement
+
+	// A view transition started where another runs skips the first: its
+	// update still runs, only its animation goes, and its ready promise
+	// rejects with an AbortError. Datastar starts one for each frame of a
+	// view that animates (useViewTransition) and keeps none of them, so a
+	// frame that comes before the last one's glide has ended (the board,
+	// when moves come faster than 640 ms) left an uncaught rejection in the
+	// console and in every error tracker. Every transition's ready is
+	// handled here: a skip is nothing to report; anything else, such as
+	// two elements with one view-transition-name, is thrown again, and an
+	// update that throws still rejects finished, which nothing handles.
+	for (const proto of [Document.prototype, Element.prototype]) {
+		const start = proto.startViewTransition
+		if (typeof start !== 'function') continue
+		proto.startViewTransition = function (...args) {
+			const t = start.apply(this, args)
+			t.ready.catch((err) => {
+				if (err?.name !== 'AbortError') throw err
+			})
+			return t
+		}
+	}
 	const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 
 	const pathOf = (url) => {
