@@ -11,7 +11,7 @@
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable, streamID } from 'lith-ui'
+import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable } from 'lith-ui'
 import {
 	AnimBusy,
 	AnimNudge,
@@ -103,11 +103,18 @@ controller('board', (el, scope) => {
 		s.mode = st.hold
 	})
 
-	// The tab says hello again whenever the page's stream opens (after a
-	// deploy), from the element that says the first one.
+	// The tab says hello, for the presence row, each time its stream brings
+	// the tab's row after (re)connecting: the shell marks the board out of
+	// sync when the stream opens, retries or the tab hides (demo.Resync),
+	// and the tab's view sets synced with its first frame after. That is the
+	// page's load, a deploy, a network retry and a hidden tab shown again,
+	// whose hello the sweep may have forgotten. A board already in sync as
+	// the controller mounts says hello at once.
 	const hello = commands<Commands>(must(el, `[${AttrHello}]`))
-	scope.listen(document, 'datastar-fetch', (evt) => {
-		if (evt.detail.el.id === streamID && evt.detail.type === 'started') hello('board-hello', {})
+	let synced = false
+	scope.effect(() => {
+		if (s.synced && !synced) hello('board-hello', {})
+		synced = s.synced
 	})
 
 	// The pending move ends on its outcome (settle, below), a request that

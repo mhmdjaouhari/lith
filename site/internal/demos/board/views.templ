@@ -34,7 +34,7 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		{ post... }
 	>
 		@meStyle(me)
-		<span hidden data-hello data-init={ hello } { helloAgain... }></span>
+		<span hidden data-hello { helloPosts... }></span>
 		<div class="bd__top">
 			@Here(people)
 			@Stats(n)

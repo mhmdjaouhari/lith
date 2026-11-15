@@ -18,16 +18,8 @@ import (
 // so that a second move to the same URL never cancels the first.
 var post = MoveAction.On(demo.Post{RequestCancellation: "disabled"})
 
-// helloPost is how a hello goes out: it retries a refusal by the rate
-// limit.
-var helloPost = demo.Post{Retry: "error", RetryMaxCount: 5}
-
-// hello tells the server this tab is on the page, for the presence row,
-// when the page loads; board.ts sends it again (helloAgain's event)
-// whenever the page's stream opens, after a deploy. It goes out from an
-// element of its own, so that the stage's count of the move's requests in
-// flight never sees it.
-var (
-	hello      = HelloAction.PostTab(helloPost)
-	helloAgain = HelloAction.On(helloPost)
-)
+// helloPosts posts the hello board.ts dispatches each time the tab's
+// stream (re)connects, for the presence row, retrying a refusal by the
+// rate limit. It goes out from an element of its own, so that the stage's
+// count of the move's requests in flight never sees it.
+var helloPosts = HelloAction.On(demo.Post{Retry: "error", RetryMaxCount: 5})

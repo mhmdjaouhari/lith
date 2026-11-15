@@ -60,10 +60,14 @@ func TestBoardPendingAcrossAReconnect(t *testing.T) {
 	if !busy {
 		t.Fatal("the 500 ended the pending move")
 	}
+	p.Eval(t, `(window.hellos = 0, true)`, nil)
 	visibility(true) // Datastar closes the stream
 	waitFor(t, "the stream to close", func() bool { return a.Hub().Count("board:board") == 0 })
 	visibility(false) // and opens it again, without the move's ack
 	p.Wait(t, ended("That move did not go through. Try again."), 10*time.Second)
+	// Shown again, the tab says hello again: the sweep may have forgotten
+	// the hello of a tab hidden for long.
+	p.Wait(t, `window.hellos === 1`, 5*time.Second)
 
 	// A stream opened afresh, as after a deploy (the stream's element made
 	// again), brings a hello from the tab: the controller sends it.
