@@ -24,6 +24,7 @@ func TestSeam(t *testing.T) {
 	b.Lanes[1] = []Card{{ID: 2, Title: "Another", Tag: "docs", Version: 1, MovedBy: "x", MovedAt: time.Now()}}
 	people := []Person{{Avatar: AvatarOf("x"), Tabs: 1}}
 	schema := dscheck.Schema{"_board": reflect.TypeFor[Signals]()}
+	var both strings.Builder
 	for name, c := range map[string]templ.Component{
 		"stage": Stage(b, Numbers{}, people, "x", time.Now()),
 		"embed": Embed(b, Numbers{}, people, time.Now()),
@@ -35,11 +36,15 @@ func TestSeam(t *testing.T) {
 		for _, err := range dscheck.Check(sb.String(), schema, "board") {
 			t.Errorf("%s: %v", name, err)
 		}
-		if name == "stage" {
-			for _, err := range dscheck.CheckDOM(sb.String(), css, dsDOM) {
-				t.Errorf("the names board.ts reads the page by: %v", err)
-			}
+		for _, err := range dscheck.CheckRefs(sb.String()) {
+			t.Errorf("%s: %v", name, err)
 		}
+		both.WriteString(sb.String())
+	}
+	// The demo's page and the landing page's slot between them carry every
+	// name board.ts reads the page by and every region the stream patches.
+	for _, err := range dscheck.CheckDOM(both.String(), css, dsDOM) {
+		t.Error(err)
 	}
 	errs, err := dscheck.Lint(".")
 	if err != nil {

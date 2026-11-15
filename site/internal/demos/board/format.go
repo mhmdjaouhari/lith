@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func cardID(id int64) string { return "board-card-" + strconv.FormatInt(id, 10) }
+func cardID(id int64) string { return IdCard + strconv.FormatInt(id, 10) }
 
 // landed reports whether c is the card someone moved last, moments ago:
 // it glows as it lands, and lifts while it flies (board.css).

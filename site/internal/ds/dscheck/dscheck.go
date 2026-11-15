@@ -207,25 +207,36 @@ func (s Schema) Has(path string) error {
 	return nil
 }
 
-// CheckDOM reports the //ds:dom names (dsgen's dsDOM, by Go name) that
-// the page or its stylesheet lacks, by the name's kind: an Attr… is an
-// attribute of an element of page, a Class… a class of one, a Prop… a
-// custom property and an Anim… an animation that css names. The
-// controller reads the page by these names; one the templates or the CSS
-// dropped is a drag that finds nothing.
-func CheckDOM(page, css string, names map[string]string) []error {
+// markup is what a page's elements carry: attribute names, classes, ids,
+// and the id references of its id-reference attributes.
+type markup struct {
+	attrs, classes, ids map[string]bool
+	refs                []string // "attr=id"
+}
+
+// idRefs are the attributes whose value names ids on the page.
+var idRefs = map[string]bool{"aria-labelledby": true, "aria-describedby": true, "aria-controls": true, "aria-owns": true, "aria-activedescendant": true, "aria-errormessage": true, "for": true, "popovertarget": true, "commandfor": true, "list": true, "form": true}
+
+func parse(page string) (markup, error) {
+	m := markup{attrs: map[string]bool{}, classes: map[string]bool{}, ids: map[string]bool{}}
 	nodes, err := html.ParseFragment(strings.NewReader(page), &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body})
 	if err != nil {
-		return []error{err}
+		return m, err
 	}
-	attrs, classes := map[string]bool{}, map[string]bool{}
 	var walk func(n *html.Node)
 	walk = func(n *html.Node) {
 		for _, a := range n.Attr {
-			attrs[a.Key] = true
-			if a.Key == "class" {
+			m.attrs[a.Key] = true
+			switch {
+			case a.Key == "class":
 				for _, c := range strings.Fields(a.Val) {
-					classes[c] = true
+					m.classes[c] = true
+				}
+			case a.Key == "id":
+				m.ids[a.Val] = true
+			case idRefs[a.Key]:
+				for _, id := range strings.Fields(a.Val) {
+					m.refs = append(m.refs, a.Key+"="+id)
 				}
 			}
 		}
@@ -236,6 +247,40 @@ func CheckDOM(page, css string, names map[string]string) []error {
 	for _, n := range nodes {
 		walk(n)
 	}
+	return m, nil
+}
+
+// CheckRefs reports the id references of page (aria-labelledby, for and
+// the like) that name no element of page: a label that labels nothing.
+func CheckRefs(page string) []error {
+	m, err := parse(page)
+	if err != nil {
+		return []error{err}
+	}
+	var errs []error
+	for _, r := range m.refs {
+		attr, id, _ := strings.Cut(r, "=")
+		if !m.ids[id] {
+			errs = append(errs, fmt.Errorf("%s names %q, which no element of the page is", attr, id))
+		}
+	}
+	return errs
+}
+
+// CheckDOM reports the //ds:dom names (dsgen's dsDOM, by Go name) that
+// the page or its stylesheet lacks, by the name's kind: an Attr… is an
+// attribute of an element of page, a Class… a class of one, an Id… the id
+// of one (an id prefix when it ends in -, which some id begins with), a
+// Prop… a custom property and an Anim… an animation that css names. The
+// controller reads the page by these names and the stream finds its
+// regions by their ids; one the templates or the CSS dropped is a drag
+// that finds nothing or a region no frame reaches.
+func CheckDOM(page, css string, names map[string]string) []error {
+	m, err := parse(page)
+	if err != nil {
+		return []error{err}
+	}
+	attrs, classes := m.attrs, m.classes
 	keys := make([]string, 0, len(names))
 	for k := range names {
 		keys = append(keys, k)
@@ -250,12 +295,18 @@ func CheckDOM(page, css string, names map[string]string) []error {
 			ok = attrs[v]
 		case strings.HasPrefix(name, "Class"):
 			ok = classes[v]
+		case strings.HasPrefix(name, "Id") && strings.HasSuffix(v, "-"):
+			for id := range m.ids {
+				ok = ok || strings.HasPrefix(id, v)
+			}
+		case strings.HasPrefix(name, "Id"):
+			ok = m.ids[v]
 		case strings.HasPrefix(name, "Prop"):
 			ok = regexp.MustCompile(regexp.QuoteMeta(v) + `\b`).MatchString(css)
 		case strings.HasPrefix(name, "Anim"):
 			ok = regexp.MustCompile(`@keyframes\s+` + regexp.QuoteMeta(v) + `\b`).MatchString(css)
 		default:
-			errs = append(errs, fmt.Errorf("%s: name a //ds:dom constant Attr…, Class…, Prop… or Anim…", name))
+			errs = append(errs, fmt.Errorf("%s: name a //ds:dom constant Attr…, Class…, Id…, Prop… or Anim…", name))
 			continue
 		}
 		if !ok {

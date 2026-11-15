@@ -59,7 +59,7 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 // card has a view-transition name of its own, so when a frame moves one,
 // it glides from its old place to its new one.
 templ LanesView(b Board, now time.Time) {
-	<div id="board-lanes" class={ ClassLanes }>
+	<div id={ IdLanes } class={ ClassLanes }>
 		for i, lane := range b.Lanes {
 			<section class="bd-lane" data-lane={ strconv.Itoa(i) } data-name={ LaneNames[i] } aria-labelledby={ "board-lane-" + strconv.Itoa(i) }>
 				<h3 id={ "board-lane-" + strconv.Itoa(i) } class="bd-lane__head">
@@ -128,12 +128,12 @@ templ face(a Avatar) {
 // came, and how many tabs they have open. A new one pops in
 // (@starting-style); the page's own style marks the viewer's.
 templ Here(people []Person) {
-	<div id="board-here" class="bd-cell bd-here">
+	<div id={ IdHere } class="bd-cell bd-here">
 		<p class="bd-cell__label">{ hereLine(people) }</p>
 		<ul class="bd-here__list" role="list" aria-label="On the board now">
 			for i, p := range people {
 				if i < Shown {
-					<li id={ "board-av-" + p.Who } class="bd-av" data-who={ p.Who } style={ hueStyle(p.Avatar) }>
+					<li id={ IdAvatar + p.Who } class="bd-av" data-who={ p.Who } style={ hueStyle(p.Avatar) }>
 						@face(p.Avatar)
 						<span class="bd-av__name">{ p.Name }</span>
 					</li>
@@ -150,7 +150,7 @@ templ Here(people []Person) {
 // moves it took in, one render, a frame for every tab that watches), and
 // the frames it sends a second, with a sparkline of the last 30 seconds.
 templ Stats(n Numbers) {
-	<div id="board-stats" class="bd-stats">
+	<div id={ IdStats } class="bd-stats">
 		<div class="bd-cell bd-tick">
 			<p class="bd-cell__label">The last tick with a move</p>
 			if n.Last.Moves > 0 {
@@ -185,7 +185,7 @@ templ Stats(n Numbers) {
 // Outcome is the tab's own region: what became of its last move.
 templ Outcome(s TabState) {
 	<p
-		id="board-outcome"
+		id={ IdOutcome }
 		role="status"
 		if s.Refusal != "" {
 			class="outcome is-refused"
@@ -224,14 +224,14 @@ templ Embed(b Board, n Numbers, people []Person, now time.Time) {
 // moved gets a new id (its version is in it), so the morph puts in a new
 // element, and one that just moved arrives with a glow (@starting-style).
 templ Mini(b Board, now time.Time) {
-	<div id="board-mini" class="bd-mini" role="img" aria-label={ miniLabel(b) }>
+	<div id={ IdMini } class="bd-mini" role="img" aria-label={ miniLabel(b) }>
 		for i, lane := range b.Lanes {
 			<div class="bd-mini__lane">
 				<span class="bd-mini__name" aria-hidden="true">{ LaneNames[i] }</span>
 				<ol class="bd-mini__cards" role="list">
 					for _, c := range lane {
 						<li
-							id={ "board-mini-" + strconv.FormatInt(c.ID, 10) + "-" + strconv.FormatInt(c.Version, 10) }
+							id={ IdMiniCard + strconv.FormatInt(c.ID, 10) + "-" + strconv.FormatInt(c.Version, 10) }
 							class="bd-mini__card"
 							data-tag={ c.Tag }
 							if !c.MovedAt.IsZero() && now.Sub(c.MovedAt) < Fresh {

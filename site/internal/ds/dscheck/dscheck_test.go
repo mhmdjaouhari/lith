@@ -52,14 +52,22 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+func TestCheckRefs(t *testing.T) {
+	page := `<p id="help">h</p><label for="name">n</label><input id="name" aria-describedby="help hint"><section aria-labelledby="head"></section>`
+	errs := CheckRefs(page)
+	if len(errs) != 2 || !strings.Contains(errs[0].Error(), `"hint"`) || !strings.Contains(errs[1].Error(), `"head"`) {
+		t.Errorf("%v", errs)
+	}
+}
+
 func TestCheckDOM(t *testing.T) {
-	page := `<div class="a b" data-card="1"><p class="c"></p></div>`
+	page := `<div id="x-lanes" class="a b" data-card="1"><p id="x-card-4" class="c"></p></div>`
 	css := `.a { --x-on: 1; animation: spin 1s } @keyframes spin {}`
-	good := map[string]string{"AttrCard": "data-card", "ClassB": "b", "ClassC": "c", "PropOn": "--x-on", "AnimSpin": "spin"}
+	good := map[string]string{"AttrCard": "data-card", "ClassB": "b", "ClassC": "c", "PropOn": "--x-on", "AnimSpin": "spin", "IdLanes": "x-lanes", "IdCard": "x-card-"}
 	if errs := CheckDOM(page, css, good); len(errs) > 0 {
 		t.Fatalf("%v", errs)
 	}
-	bad := map[string]string{"AttrLane": "data-lane", "ClassD": "d", "PropOff": "--x-off", "AnimSpin": "spinn", "Other": "x"}
+	bad := map[string]string{"AttrLane": "data-lane", "ClassD": "d", "PropOff": "--x-off", "AnimSpin": "spinn", "Other": "x", "IdHere": "x-here", "IdAvatar": "x-av-"}
 	if errs := CheckDOM(page, css, bad); len(errs) != len(bad) {
 		t.Errorf("%d errors for %d bad names: %v", len(errs), len(bad), errs)
 	}

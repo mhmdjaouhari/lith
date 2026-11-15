@@ -16,6 +16,18 @@ const (
 	AttrHello    = "data-hello"   // the element that says hello, outside the stage's count of the move's requests
 	AttrWho      = "data-who"     // an avatar's seed, which marks the viewer's own (meStyle)
 
+	// The ids of the regions the stream patches, and the prefixes of the ids
+	// a frame matches its elements by. A frame finds its target by its id,
+	// so a template that dropped one would leave that region stale.
+	IdLanes    = "board-lanes"   // the cards (boardView), and the scope of their view transition
+	IdHere     = "board-here"    // who is on the board (hereView)
+	IdStats    = "board-stats"   // the numbers (statsView)
+	IdOutcome  = "board-outcome" // the tab's last move (tabView)
+	IdMini     = "board-mini"    // the landing page's miniature (miniView)
+	IdCard     = "board-card-"   // a card's slot, and its view-transition name, by its id
+	IdAvatar   = "board-av-"     // an avatar, by its seed
+	IdMiniCard = "board-mini-"   // a card in the miniature, by its id and version
+
 	ClassLanes     = "bd-lanes"       // the lanes, the drag's bounds
 	ClassLaneCards = "bd-lane__cards" // a lane's list, the marker's anchor when it is empty
 	ClassSlot      = "bd-slot"        // a card's place in its list
