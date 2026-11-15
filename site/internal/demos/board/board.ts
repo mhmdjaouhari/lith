@@ -4,17 +4,25 @@
 // data-title. On a narrow board a lane is a row of cards that wraps, and
 // board.css says so with --bd-flow.
 //
-// Nothing here moves a card. It moves the local signals ($_board, typed
-// by Signals from signals.go) and dispatches the move, typed by MoveReq,
-// which the stage posts; the board's next frame moves the card.
+// Nothing here moves a card. It moves the page's signals ($_board, typed
+// by Signals from signals.go) and its own, and dispatches the move, typed
+// by MoveReq, which the stage posts; the board's next frame moves the
+// card.
 
-import { announcer, commands, controller, insertionIndex, must, nearest, num, opId, pending, pointerDrag, signals } from 'lith-ui'
+import { announcer, commands, controller, insertionIndex, local, must, nearest, num, opId, pending, pointerDrag, signals } from 'lith-ui'
 import type { Commands, Roots, Signals } from './ds.gen'
 
 type Mode = Signals['mode']
 
 controller('board', (el, scope) => {
+	// The page's signals: what the page's attributes and the server read.
 	const s = signals<Roots>()._board
+	// The controller's own, reactive for its effects but no part of the
+	// page's signals, which the server could patch: the card in hand (0:
+	// none), its version when it was picked up, the lane and place it came
+	// from; where it would go (lane -1: nowhere) and how many other cards
+	// that lane has; the card of the pending move, and a refused one.
+	const h = local({ drag: 0, seen: 0, from: -1, at: 0, lane: -1, index: 0, n: 0, pcard: 0, nudge: 0 })
 	const say = announcer(() => s.say, (t) => (s.say = t))
 	const send = commands<Commands>(el)
 
@@ -28,7 +36,7 @@ controller('board', (el, scope) => {
 	}
 	const indexOf = (c: HTMLElement): number => (c.parentElement ? [...c.parentElement.children].indexOf(c) : 0)
 	const others = (n: number): HTMLElement[] =>
-		[...lane(n).querySelectorAll<HTMLElement>('[data-card]')].filter((c) => num(c, 'card') !== (s.drag || s.pcard))
+		[...lane(n).querySelectorAll<HTMLElement>('[data-card]')].filter((c) => num(c, 'card') !== (h.drag || h.pcard))
 	const name = (n: number): string => lane(n).dataset['name'] ?? ''
 	const title = (c: HTMLElement): string => c.dataset['title'] ?? ''
 	const place = (n: number, index: number, count: number): string => `${name(n)}, ${index + 1} of ${count + 1}`
@@ -36,13 +44,13 @@ controller('board', (el, scope) => {
 	// aim marks where the card would go: lane -1 is nowhere.
 	const aim = (n: number, index: number): void => {
 		if (n < 0) {
-			s.lane = -1
+			h.lane = -1
 			return
 		}
 		const count = others(n).length
-		s.index = Math.max(0, Math.min(index, count))
-		s.n = count
-		s.lane = n
+		h.index = Math.max(0, Math.min(index, count))
+		h.n = count
+		h.lane = n
 	}
 
 	const aimAt = (x: number, y: number): void => {
@@ -62,18 +70,18 @@ controller('board', (el, scope) => {
 		const c = card(id)
 		if (!c) return
 		const from = laneOf(c)
-		s.drag = id
+		h.drag = id
 		s.mode = mode
-		s.seen = num(c, 'version')
-		s.from = from
-		s.at = indexOf(c)
-		aim(from, s.at)
-		if (mode === 'keys') say(`Picked up “${title(c)}”: ${place(from, s.at, s.n)}. Arrows choose a place, Space drops it, Escape puts it back.`)
+		h.seen = num(c, 'version')
+		h.from = from
+		h.at = indexOf(c)
+		aim(from, h.at)
+		if (mode === 'keys') say(`Picked up “${title(c)}”: ${place(from, h.at, h.n)}. Arrows choose a place, Space drops it, Escape puts it back.`)
 	}
 
 	const cancel = (tell: boolean): void => {
-		const c = card(s.drag)
-		s.drag = 0
+		const c = card(h.drag)
+		h.drag = 0
 		s.mode = ''
 		aim(-1, 0)
 		if (tell && c) say(`“${title(c)}” stays in ${name(laneOf(c))}.`)
@@ -82,16 +90,16 @@ controller('board', (el, scope) => {
 	// drop sends the move in hand, with the card's version from when it
 	// was picked up; a card dropped where it was goes back.
 	const drop = (): void => {
-		const c = card(s.drag)
-		const to = s.lane
-		const index = s.index
-		if (!c || to < 0 || (to === s.from && index === s.at)) {
+		const c = card(h.drag)
+		const to = h.lane
+		const index = h.index
+		if (!c || to < 0 || (to === h.from && index === h.at)) {
 			cancel(true)
 			return
 		}
-		const move = { op: opId(), card: s.drag, lane: to, index, seen: s.seen }
-		s.pcard = s.drag
-		s.drag = 0
+		const move = { op: opId(), card: h.drag, lane: to, index, seen: h.seen }
+		h.pcard = h.drag
+		h.drag = 0
 		s.mode = ''
 		s.problem = ''
 		s.op = move.op
@@ -150,10 +158,10 @@ controller('board', (el, scope) => {
 			if (arrow) {
 				evt.preventDefault()
 				const step = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0
-				const n = Math.max(0, Math.min(lanes().length - 1, s.lane + step))
-				aim(n, step ? s.index : s.index + (k === 'ArrowUp' ? -1 : 1))
-				const home = n === s.from && s.index === s.at
-				say(place(n, s.index, s.n) + (home ? ', where it is' : '') + '.')
+				const n = Math.max(0, Math.min(lanes().length - 1, h.lane + step))
+				aim(n, step ? h.index : h.index + (k === 'ArrowUp' ? -1 : 1))
+				const home = n === h.from && h.index === h.at
+				say(place(n, h.index, h.n) + (home ? ', where it is' : '') + '.')
 			} else if (k === ' ' || k === 'Enter') {
 				evt.preventDefault()
 				drop()
@@ -191,8 +199,8 @@ controller('board', (el, scope) => {
 		root,
 		end: () => {
 			s.op = ''
-			s.pcard = 0
-			if (!s.drag) aim(-1, 0)
+			h.pcard = 0
+			if (!h.drag) aim(-1, 0)
 		},
 		down: 'That move did not reach the server. Try again in a moment.',
 		failed: 'That did not work. Try again.',
@@ -205,18 +213,18 @@ controller('board', (el, scope) => {
 	scope.effect(() => {
 		const op = s.op
 		if (!op || s.ack !== op || s.v < s.ackv) return
-		const c = s.pcard
+		const c = h.pcard
 		if (!s.ok) {
-			s.nudge = c
+			h.nudge = c
 			const t = setTimeout(() => {
-				if (s.nudge === c) s.nudge = 0
+				if (h.nudge === c) h.nudge = 0
 			}, 900)
 			scope.defer(() => clearTimeout(t))
 		}
 		s.op = ''
-		s.pcard = 0
+		h.pcard = 0
 		s.problem = ''
-		if (!s.drag) aim(-1, 0)
+		if (!h.drag) aim(-1, 0)
 	})
 
 	// looks is the style of the card in hand (--bd-lift under the pointer,
@@ -230,19 +238,19 @@ controller('board', (el, scope) => {
 	const style = must<HTMLStyleElement>(el, 'style[data-bd-looks]')
 	scope.effect(() => {
 		const rules: string[] = []
-		if (s.drag) rules.push(`#board-card-${s.drag}{${s.mode === 'keys' ? '--bd-pick:1' : '--bd-lift:1'}}`)
-		if (s.pcard) rules.push(`#board-card-${s.pcard}{--bd-wait:1;--bd-busy:bd-busy}`)
-		if (s.nudge) rules.push(`#board-card-${s.nudge}{--bd-nudge:bd-nudge}`)
-		if (s.lane >= 0) {
-			const at = `[data-lane="${s.lane}"]`
+		if (h.drag) rules.push(`#board-card-${h.drag}{${s.mode === 'keys' ? '--bd-pick:1' : '--bd-lift:1'}}`)
+		if (h.pcard) rules.push(`#board-card-${h.pcard}{--bd-wait:1;--bd-busy:bd-busy}`)
+		if (h.nudge) rules.push(`#board-card-${h.nudge}{--bd-nudge:bd-nudge}`)
+		if (h.lane >= 0) {
+			const at = `[data-lane="${h.lane}"]`
 			rules.push(`${at}{--bd-target:1}`)
-			const home = s.drag && s.lane === s.from && s.index === s.at
+			const home = h.drag && h.lane === h.from && h.index === h.at
 			if (!home) {
-				const last = s.index >= s.n
-				if (s.n === 0) rules.push(`${at} .bd-lane__cards{anchor-name:--bd-slot}.bd-marker{--bd-on:1;--bd-edge:0}`)
+				const last = h.index >= h.n
+				if (h.n === 0) rules.push(`${at} .bd-lane__cards{anchor-name:--bd-slot}.bd-marker{--bd-on:1;--bd-edge:0}`)
 				else
 					rules.push(
-						`${at} .bd-slot:nth-${last ? 'last-child(1' : `child(${s.index + 1}`} of :not(#board-card-${s.drag || s.pcard})){anchor-name:--bd-slot}` +
+						`${at} .bd-slot:nth-${last ? 'last-child(1' : `child(${h.index + 1}`} of :not(#board-card-${h.drag || h.pcard})){anchor-name:--bd-slot}` +
 							`.bd-marker{--bd-on:1;--bd-edge:${last ? 1 : 0}}`,
 					)
 			}

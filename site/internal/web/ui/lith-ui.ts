@@ -7,11 +7,32 @@
 // The server stays the only one that changes state: a controller only
 // moves local signals and dispatches commands, which the page posts.
 
-import { attribute, beginBatch, effect, endBatch, root } from 'datastar'
+import { attribute, beginBatch, effect, endBatch, root, signal } from 'datastar'
 
 /** The page's signals, typed by the Roots that dsgen writes: signals<Roots>()._board. */
 export function signals<R extends object>(): R {
 	return root as unknown as R
+}
+
+/**
+ * A controller's own state: an object whose fields are Datastar signals
+ * outside the page's, so an effect that reads them runs again when they
+ * change, while the page's attributes, its data-signals and the server
+ * never see them. Sealed: a misspelt field is an error at runtime too.
+ */
+export function local<T extends Record<string, unknown>>(init: T): T {
+	const out = {} as T
+	for (const key of Object.keys(init) as (keyof T & string)[]) {
+		const s = signal(init[key])
+		Object.defineProperty(out, key, {
+			enumerable: true,
+			get: () => s(),
+			set: (v: T[typeof key]) => {
+				s(v)
+			},
+		})
+	}
+	return Object.seal(out)
 }
 
 /** Runs fn with the effects of its writes held until it returns, as Datastar runs an expression. */

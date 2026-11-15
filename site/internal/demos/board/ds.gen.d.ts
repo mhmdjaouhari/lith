@@ -7,18 +7,9 @@ export interface Signals {
 	synced: boolean
 	problem: string
 	v: number
-	drag: number
-	mode: "" | "keys" | "pointer"
-	seen: number
-	from: number
-	at: number
-	lane: number
-	index: number
-	n: number
-	pcard: number
 	ackv: number
 	ok: boolean
-	nudge: number
+	mode: "" | "keys" | "pointer"
 	say: string
 }
 

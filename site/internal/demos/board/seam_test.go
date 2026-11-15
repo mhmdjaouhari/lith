@@ -49,9 +49,16 @@ func TestSeam(t *testing.T) {
 // with their starting values.
 func TestDeclared(t *testing.T) {
 	got := NewSignals(7).Decl()
-	for _, want := range []string{`"_board":{`, `"v":7`, `"lane":-1`, `"from":-1`, `"op":""`, `"synced":false`, `"mode":""`} {
+	for _, want := range []string{`"_board":{`, `"v":7`, `"op":""`, `"synced":false`, `"mode":""`, `"say":""`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("%s lacks %s", got, want)
+		}
+	}
+	// The drag's own state is the controller's (board.ts), out of the
+	// page's signals.
+	for _, gone := range []string{`"drag"`, `"lane"`, `"pcard"`, `"inflight"`} {
+		if strings.Contains(got, gone) {
+			t.Errorf("%s declares %s", got, gone)
 		}
 	}
 }

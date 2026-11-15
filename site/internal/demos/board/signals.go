@@ -10,27 +10,20 @@ import "github.com/zweiundeins/lith/site/internal/demo"
 // for tsc to check board.ts against. A misspelt or renamed signal or
 // payload key fails the Go build or tsc, never a page at runtime.
 
-// Signals are the demo's own, declared on its stage, local to the
-// browser: a move sends only its payload.
+// Signals are the demo's own on the page, declared on its stage, local
+// to the browser: a move sends only its payload. They are what the page's
+// attributes or the server read or write; the drag's own state stays in
+// board.ts (lith-ui's local), where no patch can reach it.
 //
 //ds:signals _board S
 type Signals struct {
 	demo.OpSignals // op is the move waiting for its outcome; board.ts ends it (lith-ui's pending)
 
-	V     int64  `json:"v"`     // the board's version on the page
-	Drag  int64  `json:"drag"`  // the card in hand, 0: none
-	Mode  Mode   `json:"mode"`  // how it is held
-	Seen  int64  `json:"seen"`  // the card's version when it was picked up
-	From  int    `json:"from"`  // the lane it was picked up from
-	At    int    `json:"at"`    // and its place there
-	Lane  int    `json:"lane"`  // where it would go, -1: nowhere
-	Index int    `json:"index"` // its place there
-	N     int    `json:"n"`     // how many other cards that lane has
-	PCard int64  `json:"pcard"` // the card of the pending move
-	AckV  int64  `json:"ackv"`  // the board version that has the tab's last outcome
-	OK    bool   `json:"ok"`    // whether that outcome moved the card
-	Nudge int64  `json:"nudge"` // a refused card, for a moment
-	Say   string `json:"say"`   // the live region's text
+	V    int64  `json:"v"`    // the board's version on the page (the server's board frame)
+	AckV int64  `json:"ackv"` // the board version that has the tab's last outcome (its tab frame)
+	OK   bool   `json:"ok"`   // whether that outcome moved the card
+	Mode Mode   `json:"mode"` // how a card is held (the stage's class, the ghost)
+	Say  string `json:"say"`  // the live region's text
 }
 
 // Mode is how a card is held.
@@ -44,7 +37,7 @@ const (
 
 // NewSignals are the signals of a page that shows the board at version.
 func NewSignals(version int64) Signals {
-	return Signals{V: version, From: -1, Lane: -1}
+	return Signals{V: version}
 }
 
 // MoveReq moves a card: the move in hand, with the op id that ends its

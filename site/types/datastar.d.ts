@@ -19,6 +19,9 @@ export function effect(fn: () => void): () => void
 export function beginBatch(): void
 export function endBatch(): void
 
+/** A signal of its own, outside the page's: s() reads it (in an effect, subscribes), s(v) sets it. */
+export function signal<T>(initial: T): { (): T; (value: T): boolean }
+
 /** Reads the signal at a dotted path. */
 export function getPath(path: string): unknown
 
