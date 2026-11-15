@@ -54,9 +54,9 @@ func TestSeam(t *testing.T) {
 // and nothing for a seed that is not one.
 func TestMeStyle(t *testing.T) {
 	for me, want := range map[string]string{
-		"0123abcd":                  `<style>[data-demo="board"] [data-who="0123abcd"]{--bd-me:1;--bd-you:" (you)"}</style>`,
+		"0123abcd":                   `<style>[data-demo="board"] [data-who="0123abcd"]{--bd-me:1;--bd-you:" (you)"}</style>`,
 		`x"]{}*{color:red}[data-x="`: ``,
-		"":                          ``,
+		"":                           ``,
 	} {
 		var sb strings.Builder
 		if err := meStyle(me).Render(context.Background(), &sb); err != nil {
