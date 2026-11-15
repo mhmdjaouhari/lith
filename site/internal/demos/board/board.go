@@ -70,6 +70,9 @@ type Card struct {
 	// MovedBy is who moved it last, an avatar's seed; "" since the start.
 	MovedBy string
 	MovedAt time.Time
+	// Shifted is the board version at which the card last changed place:
+	// moved, pushed along its lane by a move, or put back by the reset.
+	Shifted int64
 }
 
 // Board is the board as everyone sees it.

@@ -341,12 +341,24 @@ func TestViews(t *testing.T) {
 			`id="board-lanes"`,
 			`id="board-card-4" class="bd-slot" data-card="4" data-version="1"`,
 			`view-transition-name: board-card-4; view-transition-class: board-card board-moved;`,
-			`view-transition-name: board-card-1;"`,
+			// The move took Tune the tick out of to do, from the fourth place,
+			// and into the top of doing: Explain the writer moved up in to do,
+			// doing's three cards down, and they glide.
+			`view-transition-name: board-card-5;"`,
+			`view-transition-name: board-card-6;"`,
+			`view-transition-name: board-card-8;"`,
 			`"_board":{"v":1}`,
 			"moved “Tune the tick” to Doing.",
 		} {
 			if !strings.Contains(first, want) {
 				t.Errorf("the board's frame has no %s:\n%s", want, first)
+			}
+		}
+		// The cards that kept their place have no name: they hold still
+		// without a group of their own in the view transition.
+		for _, id := range []string{"1", "2", "3", "9", "12"} {
+			if strings.Contains(first, "view-transition-name: board-card-"+id+";") {
+				t.Errorf("card %s kept its place but is named", id)
 			}
 		}
 		if strings.Contains(first, ada.Session) || strings.Contains(first, ada.Tab) {

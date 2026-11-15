@@ -132,8 +132,8 @@ The counts live in memory, a minute of them, and start over with the process. Th
 The sweep runs every five minutes. Once the board has gone an hour without a move, it puts the cards back where they started:
 
 ```go title=commands.go
-	if _, err := tx.Exec(`UPDATE board_cards SET lane = start_lane, pos = start_pos, version = version + 1, moved_by = '', moved_at = 0
-		WHERE lane != start_lane OR pos != start_pos OR moved_by != ''`); err != nil {
+	if _, err := tx.Exec(`UPDATE board_cards SET lane = start_lane, pos = start_pos, version = version + 1, moved_by = '', moved_at = 0, shifted = ?
+		WHERE lane != start_lane OR pos != start_pos OR moved_by != ''`, version); err != nil {
 ```
 
 Every card it moves gets a new version, so a page that still shows the old board cannot move that card, and hears why.

@@ -77,7 +77,7 @@ templ LanesView(b Board, now time.Time) {
 							if landed(b, c, now) {
 								data-landed={ strconv.FormatInt(c.Version%2, 10) }
 								style={ "view-transition-name: " + cardID(c.ID) + "; view-transition-class: board-card board-moved" }
-							} else {
+							} else if glides(b, c) {
 								style={ "view-transition-name: " + cardID(c.ID) }
 							}
 						>

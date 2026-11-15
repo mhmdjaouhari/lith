@@ -89,19 +89,21 @@ func (c Move) Apply(tx *writer.Tx) error {
 		}
 		return demo.SaveTab(tx, Slug, c.Viewer, state, c.At)
 	}
-	// Out of its lane, closing the gap, and into the other at index.
-	if _, err := tx.Exec(`UPDATE board_cards SET pos = pos - 1 WHERE lane = ? AND pos > ?`, lane, pos); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`UPDATE board_cards SET pos = pos + 1 WHERE lane = ? AND pos >= ? AND id != ?`, c.Lane, index, c.Card); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`UPDATE board_cards SET lane = ?, pos = ?, version = version + 1, moved_by = ?, moved_at = ? WHERE id = ?`,
-		c.Lane, index, c.Who, c.At.Unix(), c.Card); err != nil {
-		return err
-	}
 	if err := tx.QueryRow(`UPDATE board_meta SET version = version + 1, moved_at = ?, last_card = ?, last_lane = ?, last_by = ? WHERE id = 1 RETURNING version`,
 		c.At.Unix(), c.Card, c.Lane, c.Who).Scan(&state.Version); err != nil {
+		return err
+	}
+	// Out of its lane, closing the gap, and into the other at index. Every
+	// card that changes place records the version (shifted), so the frame
+	// that shows it lets it glide.
+	if _, err := tx.Exec(`UPDATE board_cards SET pos = pos - 1, shifted = ? WHERE lane = ? AND pos > ?`, state.Version, lane, pos); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE board_cards SET pos = pos + 1, shifted = ? WHERE lane = ? AND pos >= ? AND id != ?`, state.Version, c.Lane, index, c.Card); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE board_cards SET lane = ?, pos = ?, version = version + 1, moved_by = ?, moved_at = ?, shifted = ? WHERE id = ?`,
+		c.Lane, index, c.Who, c.At.Unix(), state.Version, c.Card); err != nil {
 		return err
 	}
 	tx.Touch(Topic)
@@ -184,11 +186,12 @@ func resetIfQuiet(tx *writer.Tx, now time.Time) error {
 	if movedAt == 0 || now.Sub(time.Unix(movedAt, 0)) < Quiet {
 		return nil
 	}
-	if _, err := tx.Exec(`UPDATE board_cards SET lane = start_lane, pos = start_pos, version = version + 1, moved_by = '', moved_at = 0
-		WHERE lane != start_lane OR pos != start_pos OR moved_by != ''`); err != nil {
+	var version int64
+	if err := tx.QueryRow(`UPDATE board_meta SET version = version + 1, moved_at = 0, last_card = 0, last_lane = 0, last_by = '' WHERE id = 1 RETURNING version`).Scan(&version); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`UPDATE board_meta SET version = version + 1, moved_at = 0, last_card = 0, last_lane = 0, last_by = '' WHERE id = 1`); err != nil {
+	if _, err := tx.Exec(`UPDATE board_cards SET lane = start_lane, pos = start_pos, version = version + 1, moved_by = '', moved_at = 0, shifted = ?
+		WHERE lane != start_lane OR pos != start_pos OR moved_by != ''`, version); err != nil {
 		return err
 	}
 	tx.Touch(Topic)

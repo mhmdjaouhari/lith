@@ -8,6 +8,20 @@ import (
 
 func cardID(id int64) string { return IdCard + strconv.FormatInt(id, 10) }
 
+// glideVersions is how many of the board's latest versions a card that
+// changed place in keeps its view-transition name for: the moves of one
+// tick, which its one frame shows together.
+const glideVersions = 3
+
+// glides reports whether c changed place lately, so the board's frame
+// names it for its view transition and it glides to its new place. A
+// named card costs the watching tab's view transition its own group, about
+// 5 ms of style a move in TestBoardStageCost whether it moves or not; the
+// cards that kept their place hold still without one.
+func glides(b Board, c Card) bool {
+	return c.Shifted > 0 && b.Version-c.Shifted < glideVersions
+}
+
 // landed reports whether c is the card someone moved last, moments ago:
 // it glows as it lands, and lifts while it flies (board.css).
 func landed(b Board, c Card, now time.Time) bool {

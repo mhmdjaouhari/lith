@@ -20,7 +20,7 @@ func readBoard(ctx context.Context, q sqlite.Querier) (Board, error) {
 	if movedAt > 0 {
 		b.MovedAt = time.Unix(movedAt, 0)
 	}
-	rows, err := q.QueryContext(ctx, `SELECT id, title, tag, lane, pos, version, moved_by, moved_at FROM board_cards ORDER BY lane, pos`)
+	rows, err := q.QueryContext(ctx, `SELECT id, title, tag, lane, pos, version, moved_by, moved_at, shifted FROM board_cards ORDER BY lane, pos`)
 	if err != nil {
 		return b, err
 	}
@@ -28,7 +28,7 @@ func readBoard(ctx context.Context, q sqlite.Querier) (Board, error) {
 	for rows.Next() {
 		var c Card
 		var at int64
-		if err := rows.Scan(&c.ID, &c.Title, &c.Tag, &c.Lane, &c.Pos, &c.Version, &c.MovedBy, &at); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.Tag, &c.Lane, &c.Pos, &c.Version, &c.MovedBy, &at, &c.Shifted); err != nil {
 			return b, err
 		}
 		if at > 0 {
