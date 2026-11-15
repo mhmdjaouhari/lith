@@ -9,7 +9,7 @@
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, attr, commands, controller, insertionIndex, local, must, nearest, num, opId, pending, pointerDrag, type Rule, Sheet, signals } from 'lith-ui'
+import { announcer, attr, commands, controller, insertionIndex, local, measured, must, nearest, num, opId, pending, pointerDrag, type Rule, Sheet, signals } from 'lith-ui'
 import {
 	AnimBusy,
 	AnimNudge,
@@ -84,17 +84,35 @@ controller('board', (el, scope) => {
 		h.lane = n
 	}
 
+	// geometry is the lanes' and the cards' boxes, and which lanes wrap,
+	// measured once and kept until a frame, a scroll or a resize may have
+	// moved them: the ghost and the marker, which the drag moves, move
+	// nothing else.
+	const geometry = measured(el, scope, [must(el, `.${ClassGhost}`), must(el, `.${ClassMarker}`)], () => ({
+		bounds: must(el, `.${ClassLanes}`).getBoundingClientRect(),
+		lanes: lanes().map((l) => ({
+			n: num(l, AttrLane),
+			box: l.getBoundingClientRect(),
+			wraps: getComputedStyle(l).getPropertyValue(PropFlow).trim() === '1',
+			cards: [...l.querySelectorAll(`[${AttrCard}]`)].map((c) => ({ id: num(c, AttrCard), box: c.getBoundingClientRect() })),
+		})),
+	}))
+
+	// aimAt aims at the place under the pointer: the nearest lane, before
+	// the first of its other cards below the pointer (or to its right in
+	// a lane that wraps); nowhere well outside the lanes.
 	const aimAt = (x: number, y: number): void => {
-		const box = must(el, `.${ClassLanes}`).getBoundingClientRect()
-		if (x < box.left - 48 || x > box.right + 48 || y < box.top - 64 || y > box.bottom + 64) {
+		const g = geometry()
+		const b = g.bounds
+		if (x < b.left - 48 || x > b.right + 48 || y < b.top - 64 || y > b.bottom + 64) {
 			aim(-1, 0)
 			return
 		}
-		const near = nearest(lanes(), x, y)
+		const near = nearest(g.lanes, x, y)
 		if (!near) return
-		const n = num(near, AttrLane)
-		const wraps = getComputedStyle(near).getPropertyValue(PropFlow).trim() === '1'
-		aim(n, insertionIndex(others(n), x, y, wraps))
+		const moving = h.drag || h.pcard
+		const boxes = near.cards.filter((c) => c.id !== moving).map((c) => c.box)
+		aim(near.n, insertionIndex(boxes, x, y, near.wraps))
 	}
 
 	const lift = (id: number, mode: Mode): void => {

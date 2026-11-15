@@ -135,6 +135,7 @@ export type Rule<P extends string> = readonly [selector: string, props: Partial<
  */
 export class Sheet<P extends `--${string}` | 'anchor-name'> {
 	#sheet = new CSSStyleSheet()
+	#text = ''
 
 	constructor(scope: Scope) {
 		document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.#sheet]
@@ -146,7 +147,12 @@ export class Sheet<P extends `--${string}` | 'anchor-name'> {
 	/** Replaces the sheet's rules. */
 	set(rules: readonly Rule<P>[]): void {
 		const css = rules.map(([sel, props]) => `${sel}{${Object.entries(props).map(([k, v]) => `${k}:${String(v)}`).join(';')}}`)
-		this.#sheet.replaceSync(css.join('\n'))
+		const text = css.join('\n')
+		// A new sheet makes the browser match every element again: only
+		// when the rules changed.
+		if (text === this.#text) return
+		this.#text = text
+		this.#sheet.replaceSync(text)
 	}
 }
 
@@ -276,28 +282,49 @@ export function distance2(r: DOMRect, x: number, y: number): number {
 	return dx * dx + dy * dy
 }
 
-/** The element whose box is nearest the point. */
-export function nearest<T extends Element>(els: Iterable<T>, x: number, y: number): T | undefined {
+/** The one of items whose box is nearest the point. */
+export function nearest<T extends { box: DOMRect }>(items: readonly T[], x: number, y: number): T | undefined {
 	let best: T | undefined
 	let d = Infinity
-	for (const e of els) {
-		const n = distance2(e.getBoundingClientRect(), x, y)
-		if (n < d) [best, d] = [e, n]
+	for (const it of items) {
+		const n = distance2(it.box, x, y)
+		if (n < d) [best, d] = [it, n]
 	}
 	return best
 }
 
 /**
- * Where an item dropped at the point would go among items: before the
- * first item below it, or, in a list that wraps (a row of cards), before
- * the first one below it or to its right. items.length: at the end.
+ * Where an item dropped at the point would go among the boxes of a list:
+ * before the first one below it, or, in a list that wraps (a row of
+ * cards), before the first one below it or to its right. boxes.length:
+ * at the end.
  */
-export function insertionIndex(items: readonly Element[], x: number, y: number, wraps: boolean): number {
-	const i = items.findIndex((c) => {
-		const r = c.getBoundingClientRect()
-		return wraps ? y < r.top || (y < r.bottom && x < r.left + r.width / 2) : y < r.top + r.height / 2
+export function insertionIndex(boxes: readonly DOMRect[], x: number, y: number, wraps: boolean): number {
+	const i = boxes.findIndex((r) => (wraps ? y < r.top || (y < r.bottom && x < r.left + r.width / 2) : y < r.top + r.height / 2))
+	return i < 0 ? boxes.length : i
+}
+
+/**
+ * Returns get, which measures the page with measure once and returns the
+ * same measurements until they may have changed: a scroll, a resize, or a
+ * change of the DOM under root but in the elements own (what the
+ * controller itself moves, such as a drag's ghost, whose changes never
+ * move the rest). A drag reads boxes at every pointer move; reading them
+ * from the page each time forces a layout each time.
+ */
+export function measured<T>(root: Element, scope: Scope, own: readonly Element[], measure: () => T): () => T {
+	let cache: { value: T } | null = null
+	const reset = (): void => {
+		cache = null
+	}
+	scope.listen(window, 'scroll', reset, { capture: true, passive: true })
+	scope.listen(window, 'resize', reset, { passive: true })
+	const mo = new MutationObserver((records) => {
+		if (records.some((r) => !own.some((o) => o.contains(r.target)))) reset()
 	})
-	return i < 0 ? items.length : i
+	mo.observe(root, { subtree: true, childList: true, attributes: true, characterData: true })
+	scope.defer(() => mo.disconnect())
+	return () => (cache ??= { value: measure() }).value
 }
 
 export interface PointerDragOptions {
@@ -375,6 +402,26 @@ export function pointerDrag(el: HTMLElement, scope: Scope, o: PointerDragOptions
 			follow(p, x, y)
 		}
 	})
+	// A pointer moves more often than the page paints: the ghost and the aim
+	// follow its latest place once a frame. A drop or a cancel first runs
+	// the frame's move, so the drop goes where the pointer let go.
+	let at: { p: Press; x: number; y: number } | null = null
+	let frame = 0
+	const step = (): void => {
+		frame = 0
+		const m = at
+		at = null
+		if (!m || m.p !== press) return
+		batch(() => {
+			follow(m.p, m.x, m.y)
+			o.aim(m.x, m.y)
+		})
+	}
+	const flush = (): void => {
+		if (frame) cancelAnimationFrame(frame)
+		step()
+	}
+	scope.defer(() => cancelAnimationFrame(frame))
 	scope.listen(el, 'pointermove', (evt) => {
 		const p = ours(evt)
 		if (!p) return
@@ -382,12 +429,13 @@ export function pointerDrag(el: HTMLElement, scope: Scope, o: PointerDragOptions
 			if (Math.hypot(evt.clientX - p.x, evt.clientY - p.y) < threshold) return
 			lift(p)
 		}
-		follow(p, evt.clientX, evt.clientY)
-		o.aim(evt.clientX, evt.clientY)
+		at = { p, x: evt.clientX, y: evt.clientY }
+		frame ||= requestAnimationFrame(step)
 	})
 	scope.listen(el, 'pointerup', (evt) => {
 		const p = ours(evt)
 		if (!p) return
+		flush()
 		press = null
 		if (p.lifted) o.drop()
 	})
@@ -395,6 +443,7 @@ export function pointerDrag(el: HTMLElement, scope: Scope, o: PointerDragOptions
 	const lost = (evt: PointerEvent): void => {
 		const p = ours(evt)
 		if (!p) return
+		at = null
 		press = null
 		if (p.lifted) o.cancel()
 	}
@@ -408,6 +457,7 @@ export function pointerDrag(el: HTMLElement, scope: Scope, o: PointerDragOptions
 		abort() {
 			const p = press
 			press = null
+			at = null
 			if (!p) return
 			if (el.hasPointerCapture(p.pointer)) el.releasePointerCapture(p.pointer)
 			if (p.lifted) o.cancel()
