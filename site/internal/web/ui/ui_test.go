@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/zweiundeins/lith/site/internal/views"
 )
 
 // TestTypeCheck runs tsc over the site's TypeScript, lith-ui and the
@@ -39,6 +41,14 @@ func TestTranspile(t *testing.T) {
 	}
 	if _, err := Transpile("bad.ts", "const x: = 1", true); err == nil || !strings.Contains(err.Error(), "bad.ts") {
 		t.Errorf("a syntax error: %v", err)
+	}
+}
+
+// TestStreamID ties lith-ui's streamID to the id the shell gives the
+// element that opens the page's stream.
+func TestStreamID(t *testing.T) {
+	if want := "export const streamID = '" + views.StreamID + "'"; !strings.Contains(Source, want) {
+		t.Errorf("lith-ui.ts has no %s", want)
 	}
 }
 

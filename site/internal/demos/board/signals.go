@@ -40,6 +40,19 @@ func NewSignals(version int64) Signals {
 	return Signals{V: version}
 }
 
+// LaneID is a lane of the board, by its index: a union of these three in
+// TypeScript, with isLaneID to tell one.
+type LaneID int
+
+const (
+	Todo LaneID = iota
+	Doing
+	Done
+)
+
+// CardID is a card's id.
+type CardID int64
+
 // MoveReq moves a card: the move in hand, with the op id that ends its
 // pending state and the card's version from when it was picked up.
 //
@@ -47,8 +60,8 @@ func NewSignals(version int64) Signals {
 type MoveReq struct {
 	Tab   string `json:"tab"`
 	Op    string `json:"op"`
-	Card  int64  `json:"card"`
-	Lane  int    `json:"lane"`
+	Card  CardID `json:"card"`
+	Lane  LaneID `json:"lane"`
 	Index int    `json:"index"`
 	Seen  int64  `json:"seen"`
 }

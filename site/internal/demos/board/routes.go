@@ -15,7 +15,7 @@ func mount(k *demo.Kit) {
 			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
 			return
 		}
-		cmd := Move{Viewer: v, Who: WhoOf(v.Session), Op: req.Op, Card: req.Card, Lane: req.Lane, Index: req.Index, Seen: req.Seen, At: time.Now()}
+		cmd := Move{Viewer: v, Who: WhoOf(v.Session), Op: req.Op, Card: int64(req.Card), Lane: int(req.Lane), Index: req.Index, Seen: req.Seen, At: time.Now()}
 		// A retried request (a flaky network) moves the card once.
 		k.Act(w, r, v, k.AckOf(S.Ack.Set(req.Op), S.AckV.Set(0), S.OK.Set(false)), writer.Once(Slug+":"+v.Session+":"+req.Op, cmd))
 	})

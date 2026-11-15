@@ -321,7 +321,7 @@ func (g *gen) refs(w *bytes.Buffer, s signals) error {
 			fmt.Fprintf(&fields, "\t%s %s%sRefs\n", f.Name(), q, named.Obj().Name())
 			fmt.Fprintf(&inits, "\t\t%s: %sNew%sRefs(path + %q),\n", f.Name(), q, named.Obj().Name(), "."+key)
 		default:
-			if _, err := tsType(f.Type(), ""); err != nil {
+			if _, err := (&tsGen{aliases: map[string]string{}}).typ(f.Type(), ""); err != nil {
 				return fmt.Errorf("%s.%s: %w", s.name, f.Name(), err)
 			}
 			typ := types.TypeString(f.Type(), g.qualifier)

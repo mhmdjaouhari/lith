@@ -11,11 +11,12 @@
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable } from 'lith-ui'
+import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable, streamID } from 'lith-ui'
 import {
 	AnimBusy,
 	AnimNudge,
 	AttrCard,
+	AttrHello,
 	AttrLane,
 	AttrLaneName,
 	AttrTitle,
@@ -28,6 +29,7 @@ import {
 	ClassMarker,
 	ClassSlot,
 	type Commands,
+	isLaneID,
 	PropBusy,
 	PropEdge,
 	PropFlow,
@@ -84,6 +86,7 @@ controller('board', (el, scope) => {
 		// drop sends the move, with the card's version from when it was
 		// picked up; the place stays marked while the move is pending.
 		drop(c, to) {
+			if (!isLaneID(to.group)) throw new Error(`board: no lane ${to.group}`)
 			const move = { op: opId(), card: num(c, AttrCard), lane: to.group, index: to.index, seen: h.seen }
 			h.pcard = move.card
 			s.problem = ''
@@ -98,6 +101,13 @@ controller('board', (el, scope) => {
 	// The page shows how a card is held: the stage's class, the ghost.
 	scope.effect(() => {
 		s.mode = st.hold
+	})
+
+	// The tab says hello again whenever the page's stream opens (after a
+	// deploy), from the element that says the first one.
+	const hello = commands<Commands>(must(el, `[${AttrHello}]`))
+	scope.listen(document, 'datastar-fetch', (evt) => {
+		if (evt.detail.el.id === streamID && evt.detail.type === 'started') hello('board-hello', {})
 	})
 
 	// The pending move ends on its outcome (settle, below), a request that

@@ -45,7 +45,11 @@ func TestBoardPendingAcrossAReconnect(t *testing.T) {
 
 	p.Eval(t, `(() => {
 		const fetch = window.fetch
-		window.fetch = (url, init) => String(url).includes('/cmd/board/move') && !window.passMove ? Promise.resolve(new Response(null, {status: 500})) : fetch(url, init)
+		window.hellos = 0
+		window.fetch = (url, init) => {
+			if (String(url).includes('/cmd/board/hello')) window.hellos++
+			return String(url).includes('/cmd/board/move') && !window.passMove ? Promise.resolve(new Response(null, {status: 500})) : fetch(url, init)
+		}
 		return true
 	})()`, nil)
 	move(4)
@@ -60,6 +64,11 @@ func TestBoardPendingAcrossAReconnect(t *testing.T) {
 	waitFor(t, "the stream to close", func() bool { return a.Hub().Count("board:board") == 0 })
 	visibility(false) // and opens it again, without the move's ack
 	p.Wait(t, ended("That move did not go through. Try again."), 10*time.Second)
+
+	// A stream opened afresh, as after a deploy (the stream's element made
+	// again), brings a hello from the tab: the controller sends it.
+	p.Eval(t, `(window.hellos = 0, (s => s.replaceWith(s.cloneNode(true)))(document.getElementById('stream')), true)`, nil)
+	p.Wait(t, `window.hellos === 1`, 5*time.Second)
 
 	p.Eval(t, `(window.passMove = true)`, nil)
 	visibility(true)

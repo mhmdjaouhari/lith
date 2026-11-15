@@ -407,7 +407,7 @@ export interface PendingOptions {
 }
 
 /** Opens the page's stream again, as sse.Reconnect has the page do. */
-export function reopenStream(id = 'stream'): void {
+export function reopenStream(id: string = streamID): void {
 	const s = document.getElementById(id)
 	s?.replaceWith(s.cloneNode(true))
 }
@@ -470,9 +470,17 @@ export function pending(el: HTMLElement, scope: Scope, o: PendingOptions): void 
 	})
 }
 
-/** A new op id: unique enough for one tab, and what demo.ValidID accepts. */
+/** The id of the element that opens the page's stream (Go: views.StreamID; TestStreamID ties them). */
+export const streamID = 'stream'
+
+/**
+ * A new op id: 96 random bits in base64url, 16 characters that
+ * demo.ValidID accepts. crypto.getRandomValues, unlike randomUUID, works
+ * outside a secure context too (a page over plain HTTP on a LAN address).
+ */
 export function opId(): string {
-	return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+	const b = crypto.getRandomValues(new Uint8Array(12))
+	return btoa(String.fromCharCode(...b)).replaceAll('+', '-').replaceAll('/', '_')
 }
 
 /** The value of a data- attribute as a number; a missing one is an error in the page. */

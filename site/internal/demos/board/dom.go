@@ -13,6 +13,7 @@ const (
 	AttrCard     = "data-card"    // a card's id, on its slot
 	AttrVersion  = "data-version" // the card's version, which a move sends as seen
 	AttrTitle    = "data-title"   // the card's title, for what the page says
+	AttrHello    = "data-hello"   // the element that says hello, outside the stage's count of the move's requests
 
 	ClassLanes     = "bd-lanes"       // the lanes, the drag's bounds
 	ClassLaneCards = "bd-lane__cards" // a lane's list, the marker's anchor when it is empty

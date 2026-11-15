@@ -6,6 +6,7 @@ export const AttrLaneName = "data-name"
 export const AttrCard = "data-card"
 export const AttrVersion = "data-version"
 export const AttrTitle = "data-title"
+export const AttrHello = "data-hello"
 export const ClassLanes = "bd-lanes"
 export const ClassLaneCards = "bd-lane__cards"
 export const ClassSlot = "bd-slot"
@@ -26,6 +27,21 @@ export const PropSlot = "--bd-slot"
 export const AnimBusy = "bd-busy"
 export const AnimNudge = "bd-nudge"
 
+/** Go: board.CardID. */
+export type CardID = number
+
+/** Go: board.LaneID. */
+export type LaneID = 0 | 1 | 2
+
+/** Whether v is a LaneID. */
+export const isLaneID = (v: unknown): v is LaneID => ([0, 1, 2] as unknown[]).includes(v)
+
+/** Go: board.Mode. */
+export type Mode = "" | "keys" | "pointer"
+
+/** Whether v is a Mode. */
+export const isMode = (v: unknown): v is Mode => (["", "keys", "pointer"] as unknown[]).includes(v)
+
 /** The signals of the Go struct Signals. The page declares them under $_board. */
 export interface Signals {
 	op: string
@@ -35,7 +51,7 @@ export interface Signals {
 	v: number
 	ackv: number
 	ok: boolean
-	mode: "" | "keys" | "pointer"
+	mode: Mode
 	say: string
 }
 
@@ -48,8 +64,8 @@ export interface Roots {
 export interface MoveReq {
 	tab: string
 	op: string
-	card: number
-	lane: number
+	card: CardID
+	lane: LaneID
 	index: number
 	seen: number
 }
@@ -59,7 +75,7 @@ export interface HelloReq {
 	tab: string
 }
 
-/** The commands by the DOM event that sends each: its detail is the payload but the tab id, which the page adds. lith-ui's command<Commands>(). */
+/** The commands by the DOM event that sends each: its detail is the payload but the tab id, which the page adds. lith-ui's commands<Commands>(). */
 export interface Commands {
 	"board-move": Omit<MoveReq, "tab">
 	"board-hello": Omit<HelloReq, "tab">
