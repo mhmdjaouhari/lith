@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -75,6 +77,33 @@ func TestCSS(t *testing.T) {
 	}
 	for _, err := range dscheck.CheckCSS(css, "cb", Slug, dsDOM, pages...) {
 		t.Error(err)
+	}
+}
+
+// TestSlotStopsListProps checks that a slot sets each custom property of
+// the vendored sb-virtual-scroll's own (--_…), which its tiles would
+// otherwise inherit: one the slot misses would restyle every box as the
+// list scrolls.
+func TestSlotStopsListProps(t *testing.T) {
+	bundle, err := os.ReadFile("../../web/static/vendor/starbase/virtual-scroll/virtual-scroll.bundle.min.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]bool{}
+	for _, m := range regexp.MustCompile(`--_[a-zA-Z0-9_-]+`).FindAllString(string(bundle), -1) {
+		names[m] = true
+	}
+	if len(names) == 0 {
+		t.Fatal("the bundle sets no --_ property: is this still the list?")
+	}
+	rule := regexp.MustCompile(`(?s)\n\t\.cb-slot \{(.*?)\n\t\}`).FindStringSubmatch(css)
+	if rule == nil {
+		t.Fatal("checkboxes.css has no .cb-slot rule")
+	}
+	for name := range names {
+		if !regexp.MustCompile(`(?m)^\s*` + regexp.QuoteMeta(name) + `:\s*initial;`).MatchString(rule[1]) {
+			t.Errorf(".cb-slot does not set %s: initial", name)
+		}
 	}
 }
 

@@ -216,7 +216,20 @@
 		}
 	}
 
+	/* sb-virtual-scroll places its window with custom properties that its
+	 * shadow tree sets (--_y, --_h...), and the slots inherit them. They
+	 * change as the list scrolls and moves its window, and each change
+	 * would restyle every box of every tile: a slot sets them to a value of
+	 * its own, so the change stops at the twelve slots. TestSlotStopsListProps
+	 * holds this list to the vendored component's. */
 	.cb-slot {
+		--_ph: initial;
+		--_focus: initial;
+		--_head: initial;
+		--_y: initial;
+		--_h: initial;
+		--_size: initial;
+		--_cols: initial;
 		display: grid;
 		justify-items: center;
 		align-content: start;
