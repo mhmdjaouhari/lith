@@ -128,6 +128,11 @@ func checkAttr(n *html.Node, a html.Attribute, schema Schema, controllers []stri
 		}
 		return nil
 	}
+	// data-style takes a custom property as its key as it stands
+	// (data-style:--cb-pitch): Datastar sets it with setProperty.
+	if plugin == "style" {
+		key = strings.TrimPrefix(key, "--")
+	}
 	if keyed && !pluginKey.MatchString(key) {
 		return fmt.Errorf("%s: key %q: lowercase, digits and -", where, key)
 	}

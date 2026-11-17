@@ -15,23 +15,10 @@ import (
 	"github.com/zweiundeins/lith/site/internal/demo"
 )
 
+// The grid's numbers (Boxes, ChunkSize, Chunks, Slots, MaxCols) are in
+// dom.go, which shares them with checkboxes.ts.
 const (
 	Slug = "checkboxes"
-	// Boxes is how many boxes there are, numbered 1 to Boxes on the page
-	// and 0 to Boxes-1 inside.
-	Boxes = 1_000_000
-	// ChunkSize is how many boxes a chunk holds: a row of
-	// checkboxes_chunks, a tile on the page, a view.
-	ChunkSize = 256
-	// Chunks is how many chunks there are; the last one holds 64 boxes.
-	Chunks = (Boxes + ChunkSize - 1) / ChunkSize
-	// Slots is how many chunks a tab watches at once: the window around
-	// what it shows. The page has as many slots for tiles, and chunk n's
-	// tile goes into slot n % Slots, so its frame finds its place in every
-	// tab that shows it.
-	Slots = 12
-	// MaxCols is the most tiles in a row of the grid.
-	MaxCols = 4
 	// Trend is how many seconds the rate's chart shows.
 	Trend = 30
 	// KeptSeconds is how long the per-second counts are kept.
@@ -55,6 +42,9 @@ var (
 	how string
 	//go:embed checkboxes.css
 	css string
+	// script is the controller and the seam it is checked against.
+	//go:embed checkboxes.ts ds.gen.ts
+	script embed.FS
 )
 
 // Demo is the million checkboxes as the site lists it.
@@ -67,6 +57,7 @@ var Demo = demo.Demo{
 	Server:     server,
 	How:        how,
 	CSS:        css,
+	Script:     script,
 	Components: []string{"virtual-scroll", "sparkline"},
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},

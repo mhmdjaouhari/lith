@@ -41,6 +41,8 @@ func TestCheck(t *testing.T) {
 		"empty expression":  {`<p data-show=""></p>`, `no expression`},
 		"controller value":  {`<p data-ctl="x"></p>`, `takes no key and no value`},
 		"misspelt in a mod": {`<p data-on:click__window="$_x.opp"></p>`, `no signal "opp"`},
+		"style property":    {`<p data-style:--x-pitch="$_x.op + 'px'"></p>`, ``},
+		"other key with --": {`<p data-attr:--x="$_x.op"></p>`, `lowercase, digits and -`},
 	} {
 		errs := Check(c.page, schema, "ctl")
 		switch {

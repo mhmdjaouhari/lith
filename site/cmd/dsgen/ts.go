@@ -13,10 +13,11 @@ import (
 // tsSource writes the structs as TypeScript: an interface per signals
 // struct and per payload; Roots, the page's signals by the names they are
 // declared under; Commands, each command's payload by the DOM event that
-// sends it (<slug>-<name>); and the //ds:dom names as values. A named Go
+// sends it (<slug>-<name>); the //ds:dom names and the //ds:const
+// constants as values. A named Go
 // type of a basic kind is a named type here too: an enum (a type with
 // constants) the union of their values, with a guard that tells one.
-func tsSource(sigs []signals, cmds []command, doms []domConst) ([]byte, error) {
+func tsSource(sigs []signals, cmds []command, doms []domConst, vals []valueConst) ([]byte, error) {
 	g := &tsGen{aliases: map[string]string{}}
 	var body bytes.Buffer
 	var roots []signals
@@ -60,6 +61,12 @@ func tsSource(sigs []signals, cmds []command, doms []domConst) ([]byte, error) {
 		b.WriteString("\n// The names of the page's markup that the templates and the controller share (//ds:dom).\n")
 		for _, d := range doms {
 			fmt.Fprintf(&b, "export const %s = %q\n", d.name, d.value)
+		}
+	}
+	if len(vals) > 0 {
+		b.WriteString("\n// The constants that the Go code and the controller share (//ds:const).\n")
+		for _, v := range vals {
+			fmt.Fprintf(&b, "export const %s = %s\n", v.name, v.lit)
 		}
 	}
 	names := make([]string, 0, len(g.aliases))

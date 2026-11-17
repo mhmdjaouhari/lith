@@ -4,32 +4,30 @@ import "strconv"
 
 // Stage is the demo on its page: the numbers, the jump field, and the grid
 // at the tab's window, its tiles drawn from the document's read. The
-// stage holds the signals and the handlers; no frame morphs it.
+// stage holds the signals; no frame morphs it. data-checkboxes mounts its
+// controller (checkboxes.ts) once its signals are declared: it sends the
+// clicks, which the stage posts, the windows, which their own elements
+// post, and keeps the boxes that wait.
 templ Stage(w Window, tiles []shown, s Stats) {
 	<div
 		class="cb"
-		data-signals={ signals }
-		data-init={ measure }
-		data-on:resize__window__debounce.150ms={ measure }
-		data-on:click={ flip }
-		data-on:keydown={ arrows }
-		data-on:datastar-prop-change={ settle }
-		data-on:datastar-fetch={ fetched }
-		data-on-signal-patch={ onPatch }
-		data-on-signal-patch-filter={ patchFilter }
-		data-effect={ focusTarget }
-		data-style:--cb-pitch="$_checkboxes.pitch + 'px'"
+		data-signals={ NewSignals().Decl() }
+		data-checkboxes
+		{ setPosts... }
+		{ templ.Attributes{"data-style:" + PropPitch: pitch}... }
 	>
-		<form class="cb-jump" data-on:submit__prevent={ jump }>
+		<span hidden data-window { windowPosts... }></span>
+		<span hidden data-greet { greetPosts... }></span>
+		<form class={ ClassJump }>
 			<label for="checkboxes-jump">Go to box</label>
 			<div class="cb-jump__row">
-				<input id="checkboxes-jump" class="input" type="number" min="1" max={ strconv.Itoa(Boxes) } step="1" inputmode="numeric" placeholder="500000" data-bind="_checkboxes.jump"/>
+				<input id="checkboxes-jump" class="input" type="number" min="1" max={ strconv.Itoa(Boxes) } step="1" inputmode="numeric" placeholder="500000" data-bind={ S.Jump.Path() }/>
 				<button class="btn" type="submit">Go</button>
 			</div>
 		</form>
 		@StatsBar(s)
-		<p class="outcome is-problem cb__problem" role="alert" data-show="$_checkboxes.problem" data-text="$_checkboxes.problem"></p>
-		<div class="cb__frame">
+		<p class="outcome is-problem cb__problem" role="alert" style="display: none" data-show={ S.Problem.String() } data-text={ S.Problem.String() }></p>
+		<div class={ ClassFrame }>
 			<div class="cb-where" aria-hidden="true">
 				<span>#1</span>
 				<i class="cb-where__rail"><b class="cb-where__mark"></b></i>
@@ -50,7 +48,7 @@ templ Stage(w Window, tiles []shown, s Stats) {
 
 // StatsBar is the numbers, one view for everyone.
 templ StatsBar(s Stats) {
-	<dl id="checkboxes-stats" class="cb-stats">
+	<dl id={ IdStats } class="cb-stats">
 		<div class="cb-stat">
 			<dt>boxes checked</dt>
 			<dd>{ grouped(s.Checked) }</dd>
@@ -73,11 +71,11 @@ templ StatsBar(s Stats) {
 // the window wait in the park, so that a chunk's frame always finds its
 // slot. tiles holds the window's chunks for the GET document; the tab's
 // view sends the slots empty, and data-ignore-morph keeps their tiles. A
-// stream's first frame of it asks the page for its window (greet).
+// stream's first frame of it asks the page for its window (Hello).
 templ Board(w Window, tiles []shown) {
-	<div id="checkboxes-board" class="cb-board" data-effect={ greet }>
+	<div id={ IdBoard } class="cb-board">
 		<sb-virtual-scroll
-			id="checkboxes-grid"
+			id={ IdGrid }
 			class="cb-grid"
 			label="A million checkboxes"
 			item-size={ strconv.Itoa(defaultItem) }
@@ -85,13 +83,12 @@ templ Board(w Window, tiles []shown) {
 			buffer="240"
 			total={ strconv.Itoa(Chunks) }
 			offset={ strconv.Itoa(w.Start) }
-			data-attr:columns="$_checkboxes.cols"
-			data-attr:item-size="$_checkboxes.item"
+			data-attr:columns={ S.Cols.String() }
+			data-attr:item-size={ S.Item.String() }
 			data-preserve-attr="columns item-size"
-			data-on:sb-window={ setWindow }
 		>
 			for n := w.Start; n < w.End(); n++ {
-				<div id={ slotID(slot(n)) } class="cb-slot" data-ignore-morph>
+				<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph>
 					if tiles != nil {
 						@tile(n, tiles[n-w.Start].bits, tiles[n-w.Start].watching)
 					}
@@ -100,9 +97,8 @@ templ Board(w Window, tiles []shown) {
 		</sb-virtual-scroll>
 		<div class="cb-park" hidden>
 			for _, s := range parked(w) {
-				<div id={ slotID(s) } class="cb-slot" data-ignore-morph></div>
+				<div id={ slotID(s) } class={ ClassSlot } data-ignore-morph></div>
 			}
 		</div>
-		<i id={ "checkboxes-at-" + strconv.Itoa(w.Start) } hidden data-init="$_checkboxes.moved++"></i>
 	</div>
 }

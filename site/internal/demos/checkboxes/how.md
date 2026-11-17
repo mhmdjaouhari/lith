@@ -86,7 +86,7 @@ The list's items are twelve slots, and chunk `n` always sits in slot `n % 12`. I
 
 ```templ title=views.templ
 for n := w.Start; n < w.End(); n++ {
-	<div id={ slotID(slot(n)) } class="cb-slot" data-ignore-morph>
+	<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph>
 		if tiles != nil {
 			@tile(n, tiles[n-w.Start].bits, tiles[n-w.Start].watching)
 		}
@@ -98,20 +98,24 @@ The tab's view sends the slots empty, in the window's order. The morph moves the
 
 ## A box that waits
 
-The browser toggles a checkbox before the click handler runs. The handler puts it back, so the box keeps showing what the server said, marks it indeterminate, and posts the state it should take:
+The browser toggles a checkbox before the click handler runs. The page's controller, `checkboxes.ts`, puts it back, so the box keeps showing what the server said, marks it indeterminate, and sends the state it should take, which the stage posts. The command's name and payload are `SetReq`'s, which tsc checks the controller against:
 
-```go title=expr.go
-evt.preventDefault();
-const want = b.checked, sent = (b.cbSent || 0) + 1;
-b.cbSent = sent;
-$_checkboxes.problem = '';
-$_checkboxes.op = b.cbOp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+```ts title=checkboxes.ts
+evt.preventDefault()
+const want = b.checked
+const op = orderedOpId()
+const n = (sent.get(b)?.n ?? 0) + 1
+sent.set(b, { op, n })
+s.problem = ''
+s.op = op
 // Pending: indeterminate, unless the frame came first.
-setTimeout(() => b.checked !== want && b.cbSent === sent && (b.indeterminate = true));
-@post('/cmd/checkboxes/set', {payload: {tab: $_tab, op: $_checkboxes.op, box: n, checked: want}, requestCancellation: 'disabled'})
+setTimeout(() => {
+	if (b.checked !== want && sent.get(b)?.n === n) b.indeterminate = true
+})
+send('checkboxes-set', { op, box: numberOf(b), checked: want })
 ```
 
-`:indeterminate` blinks the box's edge. When the tile's frame flips the box, Datastar's morph sets its `checked` and fires `datastar-prop-change` on it, and the page ends the wait there. The morph never touches `indeterminate`, so a frame that changes another box in the tile leaves the wait alone. When someone set the box back in the same tick, no frame changes it, and the ack of the click's op ends the wait instead: no timer does.
+`:indeterminate` blinks the box's edge. When the tile's frame flips the box, Datastar's morph sets its `checked` and fires `datastar-prop-change` on it, and the page ends the wait there. The morph never touches `indeterminate`, so a frame that changes another box in the tile leaves the wait alone. When someone set the box back in the same tick, no frame changes it, and the ack of the click's op ends the wait instead: no timer does. Op ids begin with the time (`orderedOpId`), so the ack of the newest click answers the older ones too.
 
 ## The numbers
 

@@ -67,4 +67,8 @@ declare global {
 		'datastar-fetch': CustomEvent<FetchDetail>
 		'datastar-signal-patch': CustomEvent<SignalPatch>
 	}
+	interface HTMLElementEventMap {
+		/** A morph set a property of the element (an input's checked) to what the server sent; it bubbles. */
+		'datastar-prop-change': Event
+	}
 }

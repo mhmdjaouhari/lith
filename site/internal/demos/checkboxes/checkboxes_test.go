@@ -319,22 +319,6 @@ func TestSweep(t *testing.T) {
 	}
 }
 
-func TestExpressions(t *testing.T) {
-	for name, x := range map[string]string{"flip": flip, "jump": jump, "focusTarget": focusTarget, "arrows": arrows} {
-		if strings.Contains(x, "CHUNK") || strings.Contains(x, "BOXES") || strings.Contains(x, "GROUPED") {
-			t.Errorf("%s has a placeholder left", name)
-		}
-		// Datastar reads $a.b-c as one path: a signal is never followed by
-		// a minus without a space.
-		if m := regexp.MustCompile(`\$[\w.]+-`).FindString(x); m != "" {
-			t.Errorf("%s: %q", name, m)
-		}
-	}
-	if !strings.Contains(flip, "* 256 +") || !strings.Contains(jump, "1,000,000") {
-		t.Error("the numbers are not filled in")
-	}
-}
-
 func read(t *testing.T, e *demotest.Env, n int) (bits []byte) {
 	t.Helper()
 	e.View(t, func(ctx context.Context, tx *sql.Tx) (err error) {

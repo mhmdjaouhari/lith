@@ -8,38 +8,21 @@ import (
 )
 
 func mount(k *demo.Kit) {
-	// A click: the box and the state it should take, from a tab, with an
-	// op id that the tab's view acks (Clicks). Setting a box twice changes
-	// it once, so a retried request needs no Once.
-	k.Action("set", demo.Rate{Every: setEvery, Burst: setBurst}, func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Tab, Op string
-			Box     int
-			Checked bool
-		}
-		if !demo.Decode(w, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok || !demo.ValidID(req.Op) {
+	// A click: the box and the state it should take, with an op id that
+	// the tab's clicks view acks (Clicks). Setting a box twice changes it
+	// once, so a retried request needs no Once.
+	SetAction.Mount(k, func(w http.ResponseWriter, r *http.Request, v demo.Viewer, req SetReq) {
+		if !demo.ValidID(req.Op) {
 			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
 			return
 		}
-		k.Act(w, r, v, demo.Ack{"ack": req.Op}, SetBox{Viewer: v, Op: req.Op, Box: req.Box, Checked: req.Checked, At: time.Now()})
+		k.Act(w, r, v, k.AckOf(S.Ack.Set(req.Op)), SetBox{Viewer: v, Op: req.Op, Box: req.Box, Checked: req.Checked, At: time.Now()})
 	})
 
 	// A window: what the list asks for as it scrolls (sb-window), and its
 	// tiles per row.
-	k.Action("window", demo.Rate{Every: windowEvery, Burst: windowBurst}, func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Tab                 string
-			Offset, Count, Cols int
-		}
-		if !demo.Decode(w, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok || req.Offset < 0 || req.Offset >= Chunks {
+	WindowAction.Mount(k, func(w http.ResponseWriter, r *http.Request, v demo.Viewer, req WindowReq) {
+		if req.Offset < 0 || req.Offset >= Chunks {
 			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
 			return
 		}

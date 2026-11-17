@@ -404,6 +404,12 @@ export interface PendingOptions {
 	lost: string
 	/** The words while a request is retried; none by default. */
 	retrying?: string
+	/**
+	 * Whether the op still waits for its ack; by default while ack is not
+	 * op. A demo whose ack answers every older op too (the checkboxes:
+	 * op ids from orderedOpId) waits while ack < op.
+	 */
+	waiting?: () => boolean
 }
 
 /** Opens the page's stream again, as sse.Reconnect has the page do. */
@@ -430,7 +436,7 @@ export function pending(el: HTMLElement, scope: Scope, o: PendingOptions): void 
 	const s = o.signals
 	let inflight = 0
 	let recheck = false
-	const waiting = (): boolean => s.op !== '' && s.ack !== s.op
+	const waiting = o.waiting ?? ((): boolean => s.op !== '' && s.ack !== s.op)
 	const fail = (words: string): void => {
 		o.end()
 		s.problem = words
@@ -481,6 +487,16 @@ export const streamID = 'stream'
 export function opId(): string {
 	const b = crypto.getRandomValues(new Uint8Array(12))
 	return btoa(String.fromCharCode(...b)).replaceAll('+', '-').replaceAll('/', '_')
+}
+
+/**
+ * A new op id that sorts after every older one, as strings compare in Go
+ * and in JS: the time in milliseconds, base 36 in 9 digits (enough until
+ * the year 5188), and 8 random characters of opId for ops of the same
+ * millisecond. An ack of the newest such id answers the older ones too.
+ */
+export function orderedOpId(): string {
+	return Date.now().toString(36).padStart(9, '0') + opId().slice(0, 8)
 }
 
 /** The value of a data- attribute as a number; a missing one is an error in the page. */

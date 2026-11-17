@@ -16,6 +16,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: the numbers, and the
@@ -71,7 +72,7 @@ func clicksView(v demo.Viewer) live.View {
 			if err := demo.LoadTab(ctx, demo.Querier(ctx, tx), ClicksKey, v, &k); err != nil {
 				return nil, err
 			}
-			return demo.Signals(map[string]any{"_checkboxes": map[string]any{"ack": k.Op, "synced": true}})
+			return demo.Signals(ds.Tree(S.Ack.Set(k.Op), S.Synced.Set(true)))
 		},
 	}
 }
@@ -107,7 +108,13 @@ func boardView(v demo.Viewer) live.View {
 }
 
 // hello asks the page for its window.
-var hello = sse.PatchSignals([]byte(`{"_checkboxes":{"hello":true}}`), false)
+var hello = func() []byte {
+	b, err := demo.Signals(ds.Tree(S.Hello.Set(true)))
+	if err != nil {
+		panic(err)
+	}
+	return b
+}()
 
 // chunkView is chunk n's tile, one view for every tab that shows it. Its
 // frame carries that tile and nothing else, into the slot every page
@@ -174,17 +181,17 @@ func writeTile(b *bytes.Buffer, n int, bits []byte, watching int) {
 	for _, c := range bits {
 		on += mbits.OnesCount8(c)
 	}
-	b.WriteString(`<div id="checkboxes-tile-`)
+	b.WriteString(`<div id="` + IdTile)
 	b.WriteString(strconv.Itoa(n))
-	b.WriteString(`" class="cb-tile" role="listitem" aria-label="Boxes `)
+	b.WriteString(`" class="` + ClassTile + `" role="listitem" aria-label="Boxes `)
 	b.Write(appendGrouped(b.AvailableBuffer(), first))
 	b.WriteString(` to `)
 	b.Write(appendGrouped(b.AvailableBuffer(), first+size(n)-1))
 	b.WriteString(`, `)
 	b.WriteString(strconv.Itoa(on))
-	b.WriteString(` checked" data-chunk="`)
+	b.WriteString(` checked" ` + AttrChunk + `="`)
 	b.WriteString(strconv.Itoa(n))
-	b.WriteString(`" data-init="$_checkboxes.moved++"><p class="cb-tile__head" aria-hidden="true"><span>#`)
+	b.WriteString(`"><p class="cb-tile__head" aria-hidden="true"><span>#`)
 	b.Write(appendGrouped(b.AvailableBuffer(), first))
 	b.WriteString(`</span>`)
 	if watching > 1 {
@@ -197,7 +204,7 @@ func writeTile(b *bytes.Buffer, n int, bits []byte, watching int) {
 		b.WriteString(strconv.Itoa(on))
 		b.WriteString(` checked</span>`)
 	}
-	b.WriteString(`</p><div class="cb-boxes">`)
+	b.WriteString(`</p><div class="` + ClassBoxes + `">`)
 	for i := range size(n) {
 		b.WriteString(`<input type=checkbox title=`)
 		b.Write(appendGrouped(b.AvailableBuffer(), first+i))
@@ -219,4 +226,4 @@ func tile(n int, bits []byte, watching int) templ.Component {
 	})
 }
 
-func slotID(s int) string { return "checkboxes-slot-" + strconv.Itoa(s) }
+func slotID(s int) string { return IdSlot + strconv.Itoa(s) }

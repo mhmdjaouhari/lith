@@ -20,6 +20,12 @@
 // marks the payload of the action POST /cmd/<slug>/<name>: it writes the
 // method demo.Command reads the route from.
 //
+// A const block takes one directive: //ds:dom for the names of the
+// page's markup (data- attributes, classes, ids, custom properties),
+// which ds_gen.go lists for dscheck.CheckDOM and ds.gen.ts exports as
+// values, or //ds:const for numbers, strings and bools that ds.gen.ts
+// exports as the same values.
+//
 // Into ds_gen.go goes the Go, into ds.gen.d.ts the same structs as
 // TypeScript interfaces, and the commands' payloads as the map of the
 // DOM events a controller dispatches to send them (<slug>-<name>), for

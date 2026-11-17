@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -109,15 +110,28 @@ func Generate(dir string) (map[string][]byte, error) {
 	var sigs []signals
 	var cmds []command
 	var doms []domConst
+	var vals []valueConst
 	for _, f := range p.Syntax {
 		for _, decl := range f.Decls {
 			gd, ok := decl.(*ast.GenDecl)
 			if ok && gd.Tok == token.CONST && len(directives(gd.Doc)) > 0 {
-				ds, err := domConsts(p.Types, gd)
+				kind, err := constKind(gd)
 				if err != nil {
 					return nil, err
 				}
-				doms = append(doms, ds...)
+				if kind == "dom" {
+					ds, err := domConsts(p.Types, gd)
+					if err != nil {
+						return nil, err
+					}
+					doms = append(doms, ds...)
+				} else {
+					vs, err := valueConsts(p.Types, gd)
+					if err != nil {
+						return nil, err
+					}
+					vals = append(vals, vs...)
+				}
 				continue
 			}
 			if !ok || gd.Tok != token.TYPE {
@@ -162,7 +176,7 @@ func Generate(dir string) (map[string][]byte, error) {
 		}
 	}
 	out := map[string][]byte{goFile: nil, tsFile: nil, oldTSFile: nil}
-	if len(sigs) == 0 && len(cmds) == 0 && len(doms) == 0 {
+	if len(sigs) == 0 && len(cmds) == 0 && len(doms) == 0 && len(vals) == 0 {
 		return out, nil
 	}
 	g := &gen{pkg: p.Types, imports: map[string]string{}, local: map[string]bool{}}
@@ -172,7 +186,7 @@ func Generate(dir string) (map[string][]byte, error) {
 	if out[goFile], err = g.goSource(p.Name, sigs, cmds, doms); err != nil {
 		return nil, err
 	}
-	if out[tsFile], err = tsSource(sigs, cmds, doms); err != nil {
+	if out[tsFile], err = tsSource(sigs, cmds, doms, vals); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -182,14 +196,63 @@ func Generate(dir string) (map[string][]byte, error) {
 // templates and the package's TypeScript share.
 type domConst struct{ name, value string }
 
+// constKind returns the one directive of a const block: "dom" or "const".
+func constKind(gd *ast.GenDecl) (string, error) {
+	ds := directives(gd.Doc)
+	if len(ds) == 1 && len(ds[0]) == 1 && (ds[0][0] == "dom" || ds[0][0] == "const") {
+		return ds[0][0], nil
+	}
+	var all []string
+	for _, args := range ds {
+		all = append(all, "//ds:"+strings.Join(args, " "))
+	}
+	return "", fmt.Errorf("a const block takes //ds:dom or //ds:const alone, not %s", strings.Join(all, ", "))
+}
+
+// valueConst is a //ds:const constant, as a JS literal.
+type valueConst struct{ name, lit string }
+
+// valueConsts reads a //ds:const const block: exported constants of a
+// basic kind (a number, a string, a bool) that the package's controller
+// reads as the same values, so that neither side types them again (the
+// size of a grid, say).
+func valueConsts(pkg *types.Package, gd *ast.GenDecl) ([]valueConst, error) {
+	var out []valueConst
+	for _, spec := range gd.Specs {
+		for _, id := range spec.(*ast.ValueSpec).Names {
+			c, ok := pkg.Scope().Lookup(id.Name).(*types.Const)
+			if !ok || !id.IsExported() {
+				return nil, fmt.Errorf("//ds:const %s: an exported constant", id.Name)
+			}
+			b, ok := c.Type().Underlying().(*types.Basic)
+			if !ok || b.Info()&(types.IsNumeric|types.IsString|types.IsBoolean) == 0 || b.Info()&types.IsComplex != 0 {
+				return nil, fmt.Errorf("//ds:const %s: a number, a string or a bool", id.Name)
+			}
+			var lit string
+			switch v := c.Val(); v.Kind() {
+			case constant.String:
+				lit = fmt.Sprintf("%q", constant.StringVal(v))
+			case constant.Int:
+				// A JS number holds an integer exactly up to 2^53.
+				if n, exact := constant.Int64Val(v); !exact || n > 1<<53 || n < -(1<<53) {
+					return nil, fmt.Errorf("//ds:const %s: %s is no exact JS number", id.Name, v)
+				}
+				lit = v.ExactString()
+			case constant.Float:
+				f, _ := constant.Float64Val(v)
+				lit = strconv.FormatFloat(f, 'g', -1, 64)
+			default:
+				lit = v.ExactString() // a bool
+			}
+			out = append(out, valueConst{id.Name, lit})
+		}
+	}
+	return out, nil
+}
+
 // domConsts reads a //ds:dom const block: exported string constants, each
 // a data- attribute's name, a class, or a custom property (--x).
 func domConsts(pkg *types.Package, gd *ast.GenDecl) ([]domConst, error) {
-	for _, args := range directives(gd.Doc) {
-		if len(args) != 1 || args[0] != "dom" {
-			return nil, fmt.Errorf("a const block takes //ds:dom alone, not //ds:%s", strings.Join(args, " "))
-		}
-	}
 	var out []domConst
 	for _, spec := range gd.Specs {
 		for _, id := range spec.(*ast.ValueSpec).Names {
