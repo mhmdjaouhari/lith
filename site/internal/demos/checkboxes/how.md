@@ -86,7 +86,7 @@ The list's items are twelve slots, and chunk `n` always sits in slot `n % 12`. I
 
 ```templ title=views.templ
 for n := w.Start; n < w.End(); n++ {
-	<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph>
+	<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph data-scope-children>
 		if tiles != nil {
 			@tile(n, tiles[n-w.Start].bits, tiles[n-w.Start].watching)
 		}

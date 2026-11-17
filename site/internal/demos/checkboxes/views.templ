@@ -72,6 +72,13 @@ templ StatsBar(s Stats) {
 // slot. tiles holds the window's chunks for the GET document; the tab's
 // view sends the slots empty, and data-ignore-morph keeps their tiles. A
 // stream's first frame of it asks the page for its window (Hello).
+//
+// A slot carries data-scope-children: after a patch Datastar tells the
+// nearest such element, and the list, a Rocket host, answers by applying
+// Datastar again to all its children, twelve tiles of 256 boxes, 40 ms for
+// each tile's frame. The slot is nearer, and nothing listens on it: a tile
+// holds no Datastar attribute, so there is nothing to apply.
+// TestCheckboxesScrollCost counts the list's re-scans.
 templ Board(w Window, tiles []shown) {
 	<div id={ IdBoard } class="cb-board">
 		<sb-virtual-scroll
@@ -88,7 +95,7 @@ templ Board(w Window, tiles []shown) {
 			data-preserve-attr="columns item-size"
 		>
 			for n := w.Start; n < w.End(); n++ {
-				<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph>
+				<div id={ slotID(slot(n)) } class={ ClassSlot } data-ignore-morph data-scope-children>
 					if tiles != nil {
 						@tile(n, tiles[n-w.Start].bits, tiles[n-w.Start].watching)
 					}
@@ -97,7 +104,7 @@ templ Board(w Window, tiles []shown) {
 		</sb-virtual-scroll>
 		<div class="cb-park" hidden>
 			for _, s := range parked(w) {
-				<div id={ slotID(s) } class={ ClassSlot } data-ignore-morph></div>
+				<div id={ slotID(s) } class={ ClassSlot } data-ignore-morph data-scope-children></div>
 			}
 		</div>
 	</div>
