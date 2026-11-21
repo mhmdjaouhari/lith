@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"html"
 	"log/slog"
 	"slices"
 	"strings"
@@ -297,12 +298,12 @@ func TestViews(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		var html strings.Builder
-		if err := page.Render(ctx, &html); err != nil {
+		var doc strings.Builder
+		if err := page.Render(ctx, &doc); err != nil {
 			return err
 		}
-		for _, want := range []string{`colour: 5, pick: 5`, `data-on:pointerdown=`, `id="life-board"`, `aria-pressed="true"`, `data-shape="gun"`} {
-			if !strings.Contains(html.String(), want) {
+		for _, want := range []string{html.EscapeString(`"colour":5,"pick":5`), ` data-life `, `id="life-board"`, `aria-pressed="true"`, `data-shape="gun"`} {
+			if !strings.Contains(doc.String(), want) {
 				t.Errorf("the page has no %s", want)
 			}
 		}

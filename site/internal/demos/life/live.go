@@ -9,6 +9,7 @@ import (
 	"github.com/zweiundeins/lith/live"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: the board as it is, who
@@ -53,18 +54,8 @@ func boardView() live.View {
 	}
 }
 
-// tab is what the tab's view patches into the page's signals: the op of
-// its newest action, and the colour its session draws in.
-type tab struct {
-	Life struct {
-		Ack    string `json:"ack"`
-		Colour int    `json:"colour"`
-		Synced bool   `json:"synced"` // the stream the page opened brought the tab's row (demo.Pending)
-	} `json:"_life"`
-}
-
 // tabView is the tab's own region, from its row in site_tabs and its
-// session's colour.
+// session's colour: the refusal of its last action, and the signals.
 func tabView(v demo.Viewer) live.View {
 	key := demo.TabTopic(Slug, v.Tab)
 	return live.View{
@@ -76,17 +67,18 @@ func tabView(v demo.Viewer) live.View {
 			if err := demo.LoadTab(ctx, q, Slug, v, &state); err != nil {
 				return nil, err
 			}
-			var t tab
-			var err error
-			if t.Life.Colour, err = colourOf(ctx, q, v.Session); err != nil {
+			colour, err := colourOf(ctx, q, v.Session)
+			if err != nil {
 				return nil, err
 			}
-			t.Life.Ack, t.Life.Synced = state.Op, true
 			html, err := demo.Patch(ctx, Outcome(state))
 			if err != nil {
 				return nil, err
 			}
-			signals, err := demo.Signals(t)
+			// The op of the tab's newest action, the colour its session draws
+			// in, and that the stream brought the tab's row (synced: lith-ui's
+			// pending).
+			signals, err := demo.Signals(ds.Tree(S.Ack.Set(state.Op), S.Colour.Set(colour), S.Synced.Set(true)))
 			if err != nil {
 				return nil, err
 			}

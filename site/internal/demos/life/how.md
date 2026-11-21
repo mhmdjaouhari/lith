@@ -130,7 +130,7 @@ The board is 50 rows of 80 cells, and each row has an id. Datastar's morph pairs
 ```go title=render.go
 var rowTags = func() (t [H]string) {
 	for y := range t {
-		t[y] = `<div id="life-r` + strconv.Itoa(y) + `">`
+		t[y] = `<div id="` + IdRow + strconv.Itoa(y) + `">`
 	}
 	return t
 }()
@@ -191,19 +191,19 @@ On a narrow screen CSS stands the board on its side: the same 80 by 50 cells in 
 
 ## Drawing
 
-While you drag, the page collects the cells under the pointer and sends them every 100 ms, joined by a line to the last cell it sent, so a fast stroke has no gaps. The cells sent show as a path in your colour until your tab's view confirms the op; the board's frame of the same tick holds the cells themselves.
+While you drag, the page's controller (`life.ts`, checked by tsc against the demo's Go structs) collects the cells under the pointer and sends them every 100 ms, or once it holds 48, joined by a line to the last cell it sent, so a fast stroke has no gaps. The cells sent show as a path in your colour until your tab's view confirms the op; the board's frame of the same tick holds the cells themselves. The payload is the Go struct `DrawReq`, so tsc refuses a misspelt or missing key, and the server answers one that gets through anyway with a 400.
 
-```go title=expr.go
-const flush = `$_life.stroke !== '' && (
-	$_life.problem = '',
-	` + newOp + `,
-	$_life.pend += $_life.draft,
-	$_life.draft = '',
-	@post('/cmd/life/draw', {payload: {tab: $_tab, op: $_life.op, cells: ($_life.last >= 0 ? $_life.last + ',' + $_life.stroke : $_life.stroke).split(',').map(Number), alive: $_life.alive}, requestCancellation: 'disabled'}),
-	$_life.last = Number($_life.stroke.split(',').pop()),
-	$_life.stroke = '',
-	$_life.sent = Date.now()
-)`
+```ts title=life.ts
+const flush = (): void => {
+	if (stroke.length === 0) return
+	const op = begin()
+	s.pend += s.draft
+	s.draft = ''
+	send('life-draw', { op, cells: last >= 0 ? [last, ...stroke] : stroke, alive: s.alive })
+	last = stroke[stroke.length - 1] ?? -1
+	stroke = []
+	sent = Date.now()
+}
 ```
 
 ## Measured

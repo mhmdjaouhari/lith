@@ -29,9 +29,6 @@ const (
 	SettledFor = 30 * time.Second
 	// ResetEvery is how long a reset by anyone holds before the next one.
 	ResetEvery = 10 * time.Second
-	// MaxStroke is the most points one draw command takes; lines join
-	// them.
-	MaxStroke = 64
 	// History is how many samples of the population the board keeps, one
 	// a second.
 	History = 60
@@ -69,6 +66,8 @@ var (
 	css string
 	//go:embed migrations
 	migrationFiles embed.FS
+	//go:embed life.ts ds.gen.ts
+	script embed.FS
 )
 
 // Demo is the Game of Life as the site lists it.
@@ -82,6 +81,7 @@ var Demo = demo.Demo{
 	How:        how,
 	CSS:        css,
 	Components: []string{"sparkline"},
+	Script:     script,
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
 	Sweep:      sweep,

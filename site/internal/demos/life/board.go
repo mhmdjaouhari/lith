@@ -7,7 +7,10 @@ import (
 
 // The board is W×H cells on a torus: its edges wrap around. It is one byte
 // per cell, row by row: 0 for a dead cell, and for a live one its colour,
-// 1 to Colours for a person's, or Wild for the soup's.
+// 1 to Colours for a person's, or Wild for the soup's. life.ts reads the
+// same numbers from ds.gen.ts.
+//
+//ds:const
 const (
 	W       = 80
 	H       = 50

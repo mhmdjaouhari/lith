@@ -14,7 +14,7 @@ import (
 // died a generation ago takes its colour's capital, two generations ago
 // the letter in trailClass.
 const (
-	cellClass  = "_abcdefghw"
+	cellClass  = CellClasses
 	dyingClass = "_ABCDEFGHW"
 	trailClass = "_ijklmnopx"
 )
@@ -40,7 +40,7 @@ var cellTags = func() (t [3][len(cellClass)]string) {
 // of the style work.
 var rowTags = func() (t [H]string) {
 	for y := range t {
-		t[y] = `<div id="life-r` + strconv.Itoa(y) + `">`
+		t[y] = `<div id="` + IdRow + strconv.Itoa(y) + `">`
 	}
 	return t
 }()
@@ -49,7 +49,7 @@ var rowTags = func() (t [H]string) {
 // out in one grid. Screen readers skip it; the counters say what it holds.
 func boardCells(cells, trail []byte) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		const open, end = `<div id="life-board" class="life__board" aria-hidden="true">`, `</div>`
+		const open, end = `<div id="` + IdBoard + `" class="life__board" aria-hidden="true">`, `</div>`
 		b := make([]byte, 0, len(open)+H*(len(rowTags[H-1])+len("</div>"))+len(cells)*len(cellTags[0][0])+len(end))
 		b = append(b, open...)
 		for y, row := range rowTags {

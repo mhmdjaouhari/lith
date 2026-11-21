@@ -1,186 +1,84 @@
 package life
 
 import (
-	"fmt"
-	"strings"
+	"github.com/a-h/templ"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 )
 
-// The Datastar expressions of the demo. Its signals live under $_life, in
-// the browser only: an action sends just its payload.
-//
-//	tool, turn     the tool (draw or a pattern's name, a glider at first), and the pattern's quarter turns,
-//	               which only grow, so that the outline always turns clockwise
-//	x, y           the cell under the pointer or the keyboard's cursor; -1: none
-//	drawing, alive a stroke is under way, and whether it draws or clears
-//	stroke, last   the stroke's points not sent yet ("12,13"), and the last one sent
-//	draft, pend    the stroke's cells as an SVG path: not sent yet, and sent but not confirmed
-//	px, py, ptool, pturn  the pattern dropped last, while it is not confirmed
-//	op, ack        the newest action's op id, and the newest the tab's view confirmed
-//	colour, pick   the colour the server says is ours, and the one we asked for
-//	resetting      a reset is on its way
-//	problem        why the last action did not go through
-//	synced, inflight, recheck  what demo.Pending keeps
-func signals(colour int) string {
-	return fmt.Sprintf(`{_life: {tool: 'glider', turn: 0, x: -1, y: -1, drawing: false, alive: true, stroke: '', last: -1, sent: 0, draft: '', pend: '', px: -1, py: -1, ptool: '', pturn: 0, op: '', ack: '', colour: %d, pick: %d, resetting: false, problem: '', synced: false, inflight: 0, recheck: false}}`, colour, colour)
-}
+// The Datastar expressions of the demo, built from the typed refs of its
+// signals (S) and its typed commands: none names a signal or a route by
+// hand. The strokes, the drops, the keyboard, the colours, the reset and
+// the pending state live in life.ts, which tsc checks against the same
+// structs.
 
-// pending is what waits on the page: the newest op until the tab's view
-// confirms it (op ids grow with time, so a newer one confirms the older
-// ones too), and a colour asked for until the session has it. It ends on
-// those, a request that never got through, or a stream that connects
-// again without them, never on a clock.
-var pending = func() demo.Pending {
-	p := demo.NewPending("_life")
-	p.Match = "el.contains(evt.detail.el)"
-	p.Waiting = "($_life.op !== '' && !($_life.ack >= $_life.op)) || $_life.pick !== $_life.colour"
-	p.End = "$_life.op = '', $_life.pend = '', $_life.draft = '', $_life.ptool = '', $_life.resetting = false, $_life.pick = $_life.colour"
-	return p
-}()
-
-// expr joins the parts of an expression, which Datastar runs as one.
-func expr(parts ...string) string { return strings.Join(parts, ", ") }
-
-// transposed is true on a field taller than wide: CSS stands the board on
-// its side there, so a column on the screen is a row of the board.
-const transposed = `el.clientHeight > el.clientWidth`
-
-// point sets $_life.x and $_life.y to the cell under the pointer.
-const point = `((r, t) => (
-	$_life.x = Math.min(79, Math.max(0, Math.floor((t ? evt.clientY - r.top : evt.clientX - r.left) / (t ? r.height : r.width) * 80))),
-	$_life.y = Math.min(49, Math.max(0, Math.floor((t ? evt.clientX - r.left : evt.clientY - r.top) / (t ? r.width : r.height) * 50)))
-))(el.getBoundingClientRect(), ` + transposed + `)`
-
-// newOp makes the op id of an action.
-const newOp = `$_life.op = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)`
-
-// square is the SVG path of the cell at x, y: a pending mark.
-const square = `'M' + $_life.x + ' ' + $_life.y + 'h1v1h-1z'`
-
-// cell is the index of the cell at x, y.
-const cell = `($_life.y * 80 + $_life.x)`
-
-// flush sends the stroke's points not sent yet, joined by a line to the
-// last one sent. Every batch must arrive: requestCancellation is off.
-const flush = `$_life.stroke !== '' && (
-	$_life.problem = '',
-	` + newOp + `,
-	$_life.pend += $_life.draft,
-	$_life.draft = '',
-	@post('/cmd/life/draw', {payload: {tab: $_tab, op: $_life.op, cells: ($_life.last >= 0 ? $_life.last + ',' + $_life.stroke : $_life.stroke).split(',').map(Number), alive: $_life.alive}, requestCancellation: 'disabled'}),
-	$_life.last = Number($_life.stroke.split(',').pop()),
-	$_life.stroke = '',
-	$_life.sent = Date.now()
-)`
-
-// begin starts a stroke where the pointer went down: it clears where it
-// starts on a live cell, and draws where it starts on a dead one.
-var begin = `$_life.tool === 'draw' && evt.isPrimary && evt.button === 0 && (` + expr(
-	point,
-	`el.setPointerCapture(evt.pointerId)`,
-	`$_life.drawing = true`,
-	`$_life.alive = !/^[a-hw]$/.test(document.getElementById('life-r' + $_life.y).children[$_life.x].className)`,
-	`$_life.last = -1`,
-	`$_life.stroke = String(`+cell+`)`,
-	`$_life.draft = `+square,
-	`$_life.sent = Date.now()`,
-) + `)`
-
-// move follows the pointer, adds each new cell to the stroke, and sends
-// the stroke every 100 ms.
-var move = expr(
-	point,
-	`$_life.drawing && ((c, s) => s.includes(',' + c + ',') || ($_life.stroke = $_life.stroke ? $_life.stroke + ',' + c : String(c), $_life.draft += `+square+`))(`+cell+`, ',' + $_life.stroke + ',')`,
-	`$_life.drawing && ($_life.stroke.split(',').length >= 48 || Date.now() - $_life.sent > 100) && (`+flush+`)`,
+// posts post the actions life.ts dispatches on the stage, whose requests
+// lith-ui's pending counts: requestCancellation 'disabled', so that every
+// batch of a stroke arrives and no action cancels the one before.
+var posts = merge(
+	DrawAction.On(demo.Post{RequestCancellation: "disabled"}),
+	DropAction.On(demo.Post{RequestCancellation: "disabled"}),
+	ResetAction.On(demo.Post{RequestCancellation: "disabled"}),
+	ColourAction.On(demo.Post{RequestCancellation: "disabled"}),
 )
 
-// end sends the rest of the stroke.
-const end = `$_life.drawing && ((` + flush + `), $_life.drawing = false)`
+// useTool picks a tool, and toolPressed is its button's aria-pressed.
+func useTool(name string) string     { return S.Tool.Assign(name) }
+func toolPressed(name string) string { return S.Tool.Eq(name) + " ? 'true' : 'false'" }
 
-// leave hides the cursor when the pointer leaves the board.
-const leave = `$_life.drawing || ($_life.x = -1)`
-
-// drop sends the pattern at x, y, and shows it pending there.
-const drop = `(
-	$_life.problem = '',
-	` + newOp + `,
-	$_life.px = $_life.x, $_life.py = $_life.y, $_life.ptool = $_life.tool, $_life.pturn = $_life.turn,
-	@post('/cmd/life/drop', {payload: {tab: $_tab, op: $_life.op, pattern: $_life.tool, cell: $_life.y * 80 + $_life.x, turn: $_life.turn % 4}, requestCancellation: 'disabled'})
-)`
-
-// click drops a pattern where the board was clicked.
-var click = `$_life.tool !== 'draw' && (` + expr(point, drop) + `)`
-
-// toggle flips the cell at x, y: the keyboard's draw.
-var toggle = `(` + expr(
-	`$_life.problem = ''`,
-	newOp,
-	`$_life.alive = !/^[a-hw]$/.test(document.getElementById('life-r' + $_life.y).children[$_life.x].className)`,
-	`$_life.pend += `+square,
-	`@post('/cmd/life/draw', {payload: {tab: $_tab, op: $_life.op, cells: [`+cell+`], alive: $_life.alive}, requestCancellation: 'disabled'})`,
-) + `)`
-
-// key moves the keyboard's cursor with the arrows (the board wraps
-// around), acts with Enter or Space, turns the pattern with R and hides
-// the cursor with Escape.
-var key = `((k, t) => k.startsWith('Arrow') ? (
-	evt.preventDefault(),
-	$_life.x < 0 && ($_life.x = 40, $_life.y = 25),
-	((a, b) => ($_life.x = ($_life.x + (t ? b : a) + 80) % 80, $_life.y = ($_life.y + (t ? a : b) + 50) % 50))(
-		k === 'ArrowRight' ? 1 : k === 'ArrowLeft' ? -1 : 0,
-		k === 'ArrowDown' ? 1 : k === 'ArrowUp' ? -1 : 0)
-) : k === 'Enter' || k === ' ' ? (
-	evt.preventDefault(),
-	$_life.x < 0 && ($_life.x = 40, $_life.y = 25),
-	$_life.tool === 'draw' ? ` + toggle + ` : ` + drop + `
-) : k === 'r' || k === 'R' ? (` + turn + `) : k === 'Escape' && ($_life.x = -1))(evt.key, ` + transposed + `)`
+// drawing is true while the tool draws: the field's crosshair, and the
+// turn button, which has nothing to turn.
+var drawing = S.Tool.Eq("draw")
 
 // turn turns the pattern a quarter clockwise.
-const turn = `$_life.turn = $_life.turn + 1`
+var turn = S.Turn.String() + " = " + S.Turn.String() + " + 1"
 
-// pick asks for a colour, which stays pending until the tab's view
-// brings it back as $_life.colour.
-func pick(c int) string {
-	return fmt.Sprintf(`$_life.pick = %d, $_life.problem = '', @post('/cmd/life/colour', {payload: {tab: $_tab, colour: %d}})`, c, c)
-}
-
-// picked and picking are a swatch's aria-pressed and aria-busy.
-func picked(c int) string { return fmt.Sprintf(`$_life.colour === %d ? 'true' : 'false'`, c) }
+// picked and picking are a swatch's aria-pressed and aria-busy: data-attr
+// writes true as an empty value, which aria-busy reads as false.
+func picked(c int) string { return S.Colour.Eq(c) + " ? 'true' : 'false'" }
 func picking(c int) string {
-	return fmt.Sprintf(`$_life.pick === %d && $_life.colour !== %d ? 'true' : false`, c, c)
+	return S.Pick.Eq(c) + " && " + S.Colour.Ne(c) + " ? 'true' : false"
 }
 
-// useTool picks a tool, and toolPressed is its button's aria-pressed.
-func useTool(name string) string     { return `$_life.tool = '` + name + `'` }
-func toolPressed(name string) string { return `$_life.tool === '` + name + `' ? 'true' : 'false'` }
+// resetting is the reset button's aria-busy.
+var resetting = S.Resetting.String() + " ? 'true' : false"
 
-// reset asks to clear the board.
-const reset = `!$_life.resetting && (
-	$_life.problem = '',
-	` + newOp + `,
-	$_life.resetting = true,
-	@post('/cmd/life/reset', {payload: {tab: $_tab, op: $_life.op}, requestCancellation: 'disabled'})
-)`
+// marks are the stroke's cells, sent and not, as one SVG path; clearing
+// marks a stroke that clears.
+var (
+	marks    = S.Pend.String() + " + " + S.Draft.String()
+	clearing = "!" + S.Alive.String()
+)
 
-// resetting is the reset button's aria-busy: data-attr writes true as an
-// empty value, which aria-busy reads as false.
-const resetting = `$_life.resetting ? 'true' : false`
+// The outlines: the pattern under the pointer or the cursor, and the one
+// dropped last until it is confirmed, each shown, named and placed by its
+// signals.
+var (
+	cursorOn  = S.X.String() + " >= 0"
+	stampOn   = S.PTool.Ne("")
+	cursor    = outlineAt(S.X.String(), S.Y.String(), S.Turn.String())
+	stamp     = outlineAt(S.PX.String(), S.PY.String(), S.PTurn.String())
+	cursorFor = S.Tool.String()
+	stampFor  = S.PTool.String()
+)
 
-// settle ends what is pending once the tab's view confirms the newest op
-// (op ids grow with time, so a newer one confirms the older ones too).
-const settle = `$_life.op !== '' && $_life.ack >= $_life.op && ($_life.op = '', $_life.pend = '', $_life.ptool = '', $_life.resetting = false)`
-
-// fetched follows the stage's requests (demo.Pending.Fetched).
-var fetched = pending.Fetched()
-
-// cursor places the pattern's outline under the pointer or the cursor.
-const cursor = `'--x:' + $_life.x + ';--y:' + $_life.y + ';--turn:' + $_life.turn`
-
-// stamp places the outline of the pattern dropped last, until it is
-// confirmed.
-const stamp = `'--x:' + $_life.px + ';--y:' + $_life.py + ';--turn:' + $_life.pturn`
+func outlineAt(x, y, turn string) string {
+	return `'--x:' + ` + x + ` + ';--y:' + ` + y + ` + ';--turn:' + ` + turn
+}
 
 // me is the stage's --me, the colour this tab draws in, for the outlines
 // and the pending marks.
-const me = `'--me: var(--life-' + ' abcdefgh'[$_life.colour] + ')'`
+var me = `'--me: var(--life-' + ' abcdefgh'[` + S.Colour.String() + `] + ')'`
+
+// The problem's line.
+var problem = S.Problem.String()
+
+func merge(as ...templ.Attributes) templ.Attributes {
+	out := templ.Attributes{}
+	for _, a := range as {
+		for k, v := range a {
+			out[k] = v
+		}
+	}
+	return out
+}
