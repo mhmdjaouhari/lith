@@ -107,6 +107,50 @@ func (c Command[Req]) PostTab(o Post) string {
 	return c.post("{tab: "+Tab.String()+"}", o)
 }
 
+// Arg is a key of an action's payload and the signal that fills it, for
+// PostSignals.
+type Arg struct {
+	key, expr string
+	typ       reflect.Type
+}
+
+// From fills the payload's key with the signal r.
+func From[T any](key string, r ds.Ref[T]) Arg {
+	return Arg{key: key, expr: r.String(), typ: reflect.TypeFor[T]()}
+}
+
+// PostSignals is the expression that posts the action with its payload
+// read from the page's signals, and the tab id: what a form without a
+// controller sends (the guestbook's name and message). It panics unless
+// args fill every key of Req but the tab, each once and with a signal of
+// the field's type, and no other key: called as a package's expressions
+// are built, so a payload the server would refuse fails the package's
+// tests, not a person's click.
+func (c Command[Req]) PostSignals(o Post, args ...Arg) string {
+	want := map[string]reflect.Type{}
+	for _, f := range mustFields[Req]() {
+		if f.Key != "tab" {
+			want[f.Key] = f.Type
+		}
+	}
+	parts := make([]string, 0, len(args)+1)
+	for _, a := range args {
+		t, ok := want[a.key]
+		switch {
+		case !ok:
+			panic(fmt.Sprintf("demo: %s has no key %q, or it is filled twice", c.URL(), a.key))
+		case t != a.typ:
+			panic(fmt.Sprintf("demo: %s's %q is a %s, not the %s of %s", c.URL(), a.key, t, a.typ, a.expr))
+		}
+		delete(want, a.key)
+		parts = append(parts, ds.Lit(a.key)+": "+a.expr)
+	}
+	for key := range want {
+		panic(fmt.Sprintf("demo: %s needs %q", c.URL(), key))
+	}
+	return c.post("{"+strings.Join(append(parts, "tab: "+Tab.String()), ", ")+"}", o)
+}
+
 // Mount mounts the action on the kit (Kit.Action) with a handler that
 // gets the decoded payload and its viewer. The payload must carry every
 // field of Req but those tagged omitempty, none other, and no null: a

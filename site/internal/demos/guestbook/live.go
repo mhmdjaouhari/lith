@@ -10,6 +10,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: the form, the tab's
@@ -45,16 +46,6 @@ func entriesView() live.View {
 	}
 }
 
-// ack tells the page which op the tab's outcome belongs to, and that the
-// stream it opened has brought the tab's row (demo.Pending).
-type ack struct {
-	Guestbook struct {
-		Ack      string `json:"ack"`
-		Accepted bool   `json:"accepted"`
-		Synced   bool   `json:"synced"`
-	} `json:"_guestbook"`
-}
-
 // tabView is the tab's own region, from its row in site_tabs, with the op
 // id that ends the page's pending state.
 func tabView(v demo.Viewer) live.View {
@@ -71,9 +62,10 @@ func tabView(v demo.Viewer) live.View {
 			if err != nil {
 				return nil, err
 			}
-			var a ack
-			a.Guestbook.Ack, a.Guestbook.Accepted, a.Guestbook.Synced = state.Op, state.Accepted(), true
-			signals, err := demo.Signals(a)
+			// The op the outcome answers, whether it added an entry, and
+			// that the stream it opened has brought the tab's row
+			// (demo.Pending).
+			signals, err := demo.Signals(ds.Tree(S.Ack.Set(state.Op), S.Accepted.Set(state.Accepted()), S.Synced.Set(true)))
 			if err != nil {
 				return nil, err
 			}

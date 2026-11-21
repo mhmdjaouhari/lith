@@ -201,13 +201,13 @@ func TestGuestbook(t *testing.T) {
 	if !strings.Contains(list, "useViewTransition true") {
 		t.Errorf("a later frame of the list does not animate:\n%s", list)
 	}
-	next(t, events, `"ack":"op1","accepted":true`)
+	next(t, events, `"accepted":true,"ack":"op1"`)
 
 	if code := post(t, c, base+"/cmd/guestbook/sign", `{"tab":"tab1","op":"op2","name":"Ada","message":"Hello from the test"}`); code != http.StatusNoContent {
 		t.Fatalf("sign again: %d", code)
 	}
 	next(t, events, "That is the newest entry already.")
-	next(t, events, `"ack":"op2","accepted":false`)
+	next(t, events, `"accepted":false,"ack":"op2"`)
 
 	// The landing page's stream carries the guestbook's slot.
 	home := listen(t, c, base+"/stream?tab=tab2")

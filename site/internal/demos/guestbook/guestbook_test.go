@@ -112,7 +112,7 @@ func TestViews(t *testing.T) {
 			return err
 		}
 		b := string(out.([]byte))
-		if !strings.Contains(b, "Thank you for signing.") || !strings.Contains(b, `"_guestbook":{"ack":"op1","accepted":true,"synced":true}`) {
+		if !strings.Contains(b, "Thank you for signing.") || !strings.Contains(b, `"_guestbook":{"accepted":true,"ack":"op1","synced":true}`) {
 			t.Errorf("the tab's view:\n%s", b)
 		}
 		page, err := renderPage(ctx, tx, me)

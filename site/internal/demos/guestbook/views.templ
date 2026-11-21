@@ -4,26 +4,27 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/views"
 )
 
 // Stage is the demo on its page: the form, the tab's outcome, the entries.
 templ Stage(list []Entry, total int, now time.Time) {
-	<div class="gb" data-signals={ signals }>
+	<div class="gb" data-signals={ Signals{}.Decl() }>
 		<form class="gb__form" data-on:submit__prevent={ sign } data-on:datastar-fetch={ fetched } data-effect={ settle } data-on-signal-patch={ op.LostExpr() } data-on-signal-patch-filter={ op.LostFilter() }>
 			<label class="field">
 				<span>Name</span>
-				<input class="input" data-bind="_guestbook.name" maxlength={ maxLen(MaxName) } required autocomplete="name" placeholder="Ada" data-attr:readonly={ pending }/>
+				<input class="input" data-bind={ S.Name.Path() } maxlength={ maxLen(MaxName) } required autocomplete="name" placeholder="Ada" data-attr:readonly={ pending }/>
 			</label>
 			<label class="field">
 				<span>Message</span>
-				<textarea class="input" data-bind="_guestbook.message" maxlength={ maxLen(MaxMessage) } required rows="3" placeholder="Hello from Biel" data-attr:readonly={ pending }></textarea>
+				<textarea class="input" data-bind={ S.Message.Path() } maxlength={ maxLen(MaxMessage) } required rows="3" placeholder="Hello from Biel" data-attr:readonly={ pending }></textarea>
 			</label>
 			<div class="gb__actions">
 				<button class="btn btn--primary" type="submit" data-attr:aria-busy={ busy }>Sign</button>
 				@Outcome(TabState{})
 			</div>
-			<p class="outcome is-problem" role="alert" data-show="$_guestbook.problem" data-text="$_guestbook.problem"></p>
+			<p class="outcome is-problem" role="alert" style="display: none" data-show={ problem } data-text={ problem }></p>
 		</form>
 		@Entries(list, total, now)
 	</div>
@@ -78,7 +79,7 @@ func entryID(e Entry) string { return "guestbook-entry-" + strconv.FormatInt(e.I
 // kept current by the landing page's stream.
 templ Embed(list []Entry, total int, now time.Time) {
 	<div class="gb-embed">
-		<p class="gb-embed__head" data-class:is-live="$_live"><span class="gb-embed__dot" aria-hidden="true"></span>The guestbook, live</p>
+		<p class="gb-embed__head" data-class:is-live={ demo.Live.String() }><span class="gb-embed__dot" aria-hidden="true"></span>The guestbook, live</p>
 		@latestList(list, total, now)
 		<a class="btn btn--sm" href="/demos/guestbook">
 			Sign it
