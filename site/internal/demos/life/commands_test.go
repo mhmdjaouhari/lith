@@ -16,6 +16,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/demo/demotest"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 var (
@@ -320,7 +321,7 @@ func TestStatus(t *testing.T) {
 	if got := status(b, t0.Add(SettledFor+time.Second)); !strings.Contains(got, "repeats itself. A new soup in 1 s") {
 		t.Errorf("settled, overdue: %q", got)
 	}
-	if got := number(1234567); got != "1,234,567" {
+	if got := format.Grouped(1234567); got != "1,234,567" {
 		t.Errorf("number: %s", got)
 	}
 }

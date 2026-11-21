@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/zweiundeins/lith/sqlite"
+
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // track is the race on the track as the page draws it: the race running
@@ -140,7 +142,7 @@ func newChart(steps []step, span time.Duration, ref float64) chart {
 		return int(math.Round(float64(min(at, span)) / float64(span) * chartW))
 	}
 	if ref > 0 {
-		c.Bench, c.BenchY = group(int64(ref)), y(ref)
+		c.Bench, c.BenchY = format.Grouped(int64(ref)), y(ref)
 		c.BenchAt = pct(float64(c.BenchY) / chartH)
 	}
 	for s := time.Duration(0); s <= span; s += time.Second {
@@ -229,22 +231,6 @@ func bars(s Sizes) []bar {
 		out[i] = bar{Label: barLabels[i], N: n, Height: strconv.FormatFloat(h, 'f', 3, 64)}
 	}
 	return out
-}
-
-// group writes n with a comma between thousands: 66,688.
-func group(n int64) string {
-	s := strconv.FormatInt(n, 10)
-	if n < 0 {
-		return "-" + group(-n)
-	}
-	var b strings.Builder
-	for i, c := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			b.WriteByte(',')
-		}
-		b.WriteRune(c)
-	}
-	return b.String()
 }
 
 // ms writes a duration in milliseconds, with one decimal below ten.

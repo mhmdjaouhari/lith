@@ -57,23 +57,3 @@ func size(n int) int { return min(ChunkSize, Boxes-n*ChunkSize) }
 
 // isSet reports whether box i of a chunk is checked.
 func isSet(bits []byte, i int) bool { return bits[i>>3]>>(i&7)&1 == 1 }
-
-// grouped writes n with a comma between each group of three digits.
-func grouped(n int) string { return string(appendGrouped(nil, n)) }
-
-// appendGrouped appends n to b as grouped writes it.
-func appendGrouped(b []byte, n int) []byte {
-	if n < 0 {
-		b = append(b, '-')
-		n = -n
-	}
-	var digits [20]byte
-	s := strconv.AppendInt(digits[:0], int64(n), 10)
-	for i, c := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			b = append(b, ',')
-		}
-		b = append(b, c)
-	}
-	return b
-}

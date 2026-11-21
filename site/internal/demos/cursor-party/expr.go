@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/a-h/templ"
+
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the party. Its signals live under
@@ -65,15 +66,11 @@ if (evt.isPrimary && at && px >= 0 && py >= 0 && px <= f.width && py <= f.height
 // sends its place too.
 func floor() templ.Attributes {
 	return templ.Attributes{
-		"data-on:pointermove__window__throttle." + ms(Throttle): move,
-		"data-on:pointermove__window__debounce." + ms(Rest):     move,
+		"data-on:pointermove__window__throttle." + ds.Ms(Throttle): move,
+		"data-on:pointermove__window__debounce." + ds.Ms(Rest):     move,
 		"data-on:pointerdown": move,
 		"data-init":           anchorHomes(),
 	}
-}
-
-func ms(d time.Duration) string {
-	return strconv.FormatInt(d.Milliseconds(), 10) + "ms"
 }
 
 // countStyle hands the counter's numbers to CSS, which rolls them from

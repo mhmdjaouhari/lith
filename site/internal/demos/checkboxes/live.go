@@ -17,6 +17,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/ds"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // renderPage draws the demo into the GET document: the numbers, and the
@@ -184,15 +185,15 @@ func writeTile(b *bytes.Buffer, n int, bits []byte, watching int) {
 	b.WriteString(`<div id="` + IdTile)
 	b.WriteString(strconv.Itoa(n))
 	b.WriteString(`" class="` + ClassTile + `" role="listitem" aria-label="Boxes `)
-	b.Write(appendGrouped(b.AvailableBuffer(), first))
+	b.Write(format.AppendGrouped(b.AvailableBuffer(), first))
 	b.WriteString(` to `)
-	b.Write(appendGrouped(b.AvailableBuffer(), first+size(n)-1))
+	b.Write(format.AppendGrouped(b.AvailableBuffer(), first+size(n)-1))
 	b.WriteString(`, `)
 	b.WriteString(strconv.Itoa(on))
 	b.WriteString(` checked" ` + AttrChunk + `="`)
 	b.WriteString(strconv.Itoa(n))
 	b.WriteString(`"><p class="cb-tile__head" aria-hidden="true"><span>#`)
-	b.Write(appendGrouped(b.AvailableBuffer(), first))
+	b.Write(format.AppendGrouped(b.AvailableBuffer(), first))
 	b.WriteString(`</span>`)
 	if watching > 1 {
 		b.WriteString(`<span class="cb-tile__eyes">`)
@@ -207,7 +208,7 @@ func writeTile(b *bytes.Buffer, n int, bits []byte, watching int) {
 	b.WriteString(`</p><div class="` + ClassBoxes + `">`)
 	for i := range size(n) {
 		b.WriteString(`<input type=checkbox title=`)
-		b.Write(appendGrouped(b.AvailableBuffer(), first+i))
+		b.Write(format.AppendGrouped(b.AvailableBuffer(), first+i))
 		if isSet(bits, i) {
 			b.WriteString(` checked`)
 		}

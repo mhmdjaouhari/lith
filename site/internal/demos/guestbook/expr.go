@@ -1,9 +1,8 @@
 package guestbook
 
 import (
-	"fmt"
-
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the demo, built from the typed refs of its
@@ -20,7 +19,7 @@ var op = demo.PendingOf(S.PendingSignalsRefs)
 // is SignReq's, read from the signals: PostSignals panics, as the package
 // loads, at a key it lacks or misspells. The tab's stream brings the op's
 // outcome back as ack.
-var sign = S.Op.Eq("") + " && " + trimmed(S.Name.String()) + " && " + trimmed(S.Message.String()) + ` && (
+var sign = S.Op.Eq("") + " && " + ds.Trimmed(S.Name.String()) + " && " + ds.Trimmed(S.Message.String()) + ` && (
 	` + S.Problem.Assign("") + `,
 	` + S.Op.String() + ` = Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
 	` + SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},
@@ -35,7 +34,7 @@ var pending = S.Op.Ne("")
 
 // busy is pending for aria-busy: data-attr writes true as an empty value,
 // which aria-busy reads as false.
-var busy = pending + " ? 'true' : false"
+var busy = ds.AriaBusy(pending)
 
 // settle ends the pending state when the outcome arrives, and empties the
 // message once it was accepted.
@@ -46,10 +45,3 @@ var fetched = op.Fetched()
 
 // The problem's line.
 var problem = S.Problem.String()
-
-// trimmed is a field's value without its spaces at the ends. The parens
-// keep .trim() out of the signal's path, which dscheck reads up to the
-// last dot.
-func trimmed(v string) string { return "(" + v + ").trim()" }
-
-func maxLen(n int) string { return fmt.Sprint(n) }

@@ -1,6 +1,10 @@
 package canvas
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/zweiundeins/lith/site/internal/format"
+)
 
 // Page is what the canvas's page draws: the board, the palette with the
 // tab's brush, the painters here and the pulse.
@@ -126,7 +130,7 @@ templ Activity(p Pulse) {
 		<h3 id="canvas-pulse-title">Last minute</h3>
 		<p class="cv__minute">
 			<strong class="cv__n" style={ "--canvas-n: " + strconv.Itoa(p.Minute) }><span class="visually-hidden">{ strconv.Itoa(p.Minute) }</span></strong>
-			{ plural(p.Minute, "pixel", "pixels") } painted
+			{ format.Plural(p.Minute, "pixel", "pixels") } painted
 		</p>
 		<div class="cv__bars" aria-hidden="true">
 			for _, n := range p.Seconds {
@@ -134,9 +138,9 @@ templ Activity(p Pulse) {
 			}
 		</div>
 		<dl class="cv__facts">
-			<div><dt>On the canvas</dt><dd>{ thousands(p.On) }</dd></div>
-			<div><dt>Fade within the hour</dt><dd>{ thousands(p.Fading) }</dd></div>
-			<div><dt>Painted since the start</dt><dd>{ thousands(int(p.Total)) }</dd></div>
+			<div><dt>On the canvas</dt><dd>{ format.Grouped(p.On) }</dd></div>
+			<div><dt>Fade within the hour</dt><dd>{ format.Grouped(p.Fading) }</dd></div>
+			<div><dt>Painted since the start</dt><dd>{ format.Grouped(int(p.Total)) }</dd></div>
 		</dl>
 	</section>
 }

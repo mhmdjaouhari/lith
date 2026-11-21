@@ -91,7 +91,7 @@ type Signals struct {
 Pressing **Sign** makes an op id and posts the form; the inputs turn read-only and the button busy while `$_guestbook.op` is set. `PostSignals` builds the payload from the signals and checks it against `SignReq` as the package loads: a key it lacks or misspells, or a signal of the wrong type, stops the site before any page sends it.
 
 ```go title=expr.go
-var sign = S.Op.Eq("") + " && " + trimmed(S.Name.String()) + " && " + trimmed(S.Message.String()) + ` && (
+var sign = S.Op.Eq("") + " && " + ds.Trimmed(S.Name.String()) + " && " + ds.Trimmed(S.Message.String()) + ` && (
 	` + S.Problem.Assign("") + `,
 	` + S.Op.String() + ` = Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
 	` + SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},

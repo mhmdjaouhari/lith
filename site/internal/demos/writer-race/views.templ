@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/views"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // Stage is the demo on its page: the controls and the tab's outcome, the
@@ -84,8 +85,8 @@ templ Track(t track) {
 				<p>No race yet. Pick the producers and the durability, and start one: it runs here, for everyone on this page.</p>
 				<p class="wr-track__ref">
 					lith's writer benchmark on this server, 200 producers:
-					<b>{ group(int64(bench[Settings{200, "NORMAL"}])) }</b> commands a second with NORMAL,
-					<b>{ group(int64(bench[Settings{200, "FULL"}])) }</b> with FULL.
+					<b>{ format.Grouped(int64(bench[Settings{200, "NORMAL"}])) }</b> commands a second with NORMAL,
+					<b>{ format.Grouped(int64(bench[Settings{200, "FULL"}])) }</b> with FULL.
 				</p>
 			</div>
 		} else {
@@ -102,7 +103,7 @@ templ Track(t track) {
 				@result(t)
 			}
 			<div class="wr-rate">
-				<p class="wr-rate__now"><b>{ group(int64(t.Rate)) }</b> commands a second</p>
+				<p class="wr-rate__now"><b>{ format.Grouped(int64(t.Rate)) }</b> commands a second</p>
 				<p class="wr-rate__note">{ t.rateNote() }</p>
 			</div>
 			@chartFigure(t.Chart, "wr-chart")
@@ -147,8 +148,8 @@ templ result(t track) {
 			data-fresh
 		}
 	>
-		<div><dt>Commands</dt><dd>{ group(t.Race.Last.Commands) }</dd></div>
-		<div><dt>Transactions</dt><dd>{ group(t.Race.Last.Batches) }</dd></div>
+		<div><dt>Commands</dt><dd>{ format.Grouped(t.Race.Last.Commands) }</dd></div>
+		<div><dt>Transactions</dt><dd>{ format.Grouped(t.Race.Last.Batches) }</dd></div>
 		<div><dt>Average batch</dt><dd>{ strconv.FormatFloat(t.Race.PerTx(), 'f', 1, 64) }</dd></div>
 		<div><dt>Commit p99</dt><dd>{ ms(t.Race.Last.P99) }</dd></div>
 	</dl>
@@ -260,14 +261,14 @@ templ Results(list []Race, now time.Time) {
 							<th scope="row">{ strconv.FormatInt(r.ID, 10) }<span class="wr-you"> (yours)</span></th>
 							<td>{ strconv.Itoa(r.Producers) }, { r.Sync }</td>
 							if r.State == "done" {
-								<td class="num wr-table__rate">{ group(int64(r.Rate())) }</td>
+								<td class="num wr-table__rate">{ format.Grouped(int64(r.Rate())) }</td>
 							} else {
 								<td class="num wr-table__stopped">{ stopped(r) }</td>
 							}
 							<td class="num">{ strconv.FormatFloat(r.PerTx(), 'f', 1, 64) }</td>
 							<td class="num wr-table__p99">{ ms(r.Last.P99) }</td>
-							<td class="num wr-table__more">{ group(r.Last.Commands) }</td>
-							<td class="num wr-table__more">{ group(r.Last.Batches) }</td>
+							<td class="num wr-table__more">{ format.Grouped(r.Last.Commands) }</td>
+							<td class="num wr-table__more">{ format.Grouped(r.Last.Batches) }</td>
 						</tr>
 					}
 				</tbody>
@@ -310,10 +311,10 @@ templ Embed(t track) {
 templ embedLive(t track) {
 	<div id="writer-race-embed" class="wr-embed__live" data-state={ t.state() }>
 		if t.Race.ID == 0 {
-			<p class="wr-embed__big"><b>{ group(int64(bench[Settings{200, "NORMAL"}])) }</b> commands a second</p>
+			<p class="wr-embed__big"><b>{ format.Grouped(int64(bench[Settings{200, "NORMAL"}])) }</b> commands a second</p>
 			<p class="wr-embed__meta">lith's writer benchmark on this server, 200 producers. No race here yet: start the first.</p>
 		} else {
-			<p class="wr-embed__big"><b>{ group(int64(t.Rate)) }</b> commands a second</p>
+			<p class="wr-embed__big"><b>{ format.Grouped(int64(t.Rate)) }</b> commands a second</p>
 			<p class="wr-embed__meta">
 				if t.Running {
 					<span class="wr-embed__running">Race { strconv.FormatInt(t.Race.ID, 10) }, on the track now:</span>

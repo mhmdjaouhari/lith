@@ -9,7 +9,6 @@ package life
 
 import (
 	"embed"
-	"io/fs"
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
@@ -76,7 +75,7 @@ var Demo = demo.Demo{
 	Title:      "Game of Life",
 	Summary:    "One board for everyone: the server computes ten generations a second while anyone watches, and every tab gets the same frame.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -85,12 +84,4 @@ var Demo = demo.Demo{
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
 	Sweep:      sweep,
-}
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
 }

@@ -6,7 +6,6 @@ package writerrace
 
 import (
 	"embed"
-	"io/fs"
 	"slices"
 	"time"
 
@@ -94,7 +93,7 @@ var Demo = demo.Demo{
 	Title:      "Writer race",
 	Summary:    "Up to 200 producers send commands to one writer for three seconds, and everyone watching sees the batches grow, tick by tick.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -103,12 +102,4 @@ var Demo = demo.Demo{
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
 	Embed:      &demo.Embed{Slot: demo.SlotLinear, Part: demo.Part{Render: renderEmbed, Views: embedViews}},
 	Sweep:      sweep,
-}
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
 }

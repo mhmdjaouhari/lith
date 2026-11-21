@@ -11,7 +11,6 @@ package town
 
 import (
 	"embed"
-	"io/fs"
 	"strconv"
 	"time"
 
@@ -89,7 +88,7 @@ var Demo = demo.Demo{
 	Featured:   true,
 	Summary:    "Build a small town together: every tile you change is an event, and a slider takes your tab back to any of them while the others build on.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -97,12 +96,4 @@ var Demo = demo.Demo{
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
 	Sweep:      sweep,
-}
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
 }

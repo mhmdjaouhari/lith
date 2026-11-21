@@ -3,11 +3,11 @@ package town
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/a-h/templ"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the demo. Its signals live under $_town,
@@ -64,11 +64,7 @@ $_town.mine++;
 // reads the position from the slider itself, which data-bind may not have
 // handed to the signal yet.
 func drag() templ.Attributes {
-	return templ.Attributes{"data-on:input__throttle." + ms(Throttle) + ".trailing": "$_town.want = +el.value;\n" + seek}
-}
-
-func ms(d time.Duration) string {
-	return strconv.FormatInt(d.Milliseconds(), 10) + "ms"
+	return templ.Attributes{"data-on:input__throttle." + ds.Ms(Throttle) + ".trailing": "$_town.want = +el.value;\n" + seek}
 }
 
 // now goes to the slider's end, which is live.
@@ -131,7 +127,7 @@ const posLabel = `+$_town.want >= $_town.head ? 'Now' : 'Position ' + (+$_town.w
 const badge = `$_badge = $_town.at !== 0 ? 'past' : ''`
 
 // pending is true while a seek waits for the server.
-const pending = `$_town.mine !== $_town.seq ? 'true' : false`
+var pending = ds.AriaBusy(`$_town.mine !== $_town.seq`)
 
 func expr(s string) string {
 	return strings.NewReplacer("COLS", strconv.Itoa(Cols), "TILES", strconv.Itoa(Tiles)).Replace(s)

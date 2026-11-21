@@ -9,7 +9,7 @@
 // Nothing here checks a box. The click goes to the server, and the tile's
 // next frame, which the stream morphs into its slot, flips it.
 
-import { commands, controller, must, orderedOpId, pending, signals } from 'lith-ui'
+import { commands, controller, grouped, must, orderedOpId, pending, signals } from 'lith-ui'
 import { AttrChunk, AttrGreet, AttrWindow, Boxes, ChunkSize, ClassBoxes, ClassFrame, ClassJump, type Commands, IdBoard, IdGrid, IdTile, PropChrome, type Roots } from './ds.gen'
 
 /** The sb-virtual-scroll host: its scrollToIndex, defined once it upgrades. */
@@ -29,8 +29,6 @@ interface Sent {
 	op: string
 	n: number
 }
-
-const grouped = (n: number): string => n.toLocaleString('en-US')
 
 controller('checkboxes', (el, scope) => {
 	const s = signals<Roots>()._checkboxes

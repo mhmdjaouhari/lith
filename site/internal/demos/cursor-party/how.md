@@ -5,8 +5,8 @@ The floor follows the pointer on the window, so the hero's links and buttons, wh
 ```go title=expr.go
 func floor() templ.Attributes {
 	return templ.Attributes{
-		"data-on:pointermove__window__throttle." + ms(Throttle): move,
-		"data-on:pointermove__window__debounce." + ms(Rest):     move,
+		"data-on:pointermove__window__throttle." + ds.Ms(Throttle): move,
+		"data-on:pointermove__window__debounce." + ds.Ms(Rest):  move,
 		"data-on:pointerdown": move,
 		"data-init":           anchorHomes(),
 	}

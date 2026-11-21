@@ -1,6 +1,9 @@
 package stream
 
-import "github.com/zweiundeins/lith/site/internal/demo"
+import (
+	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
+)
 
 // The Datastar expressions of the demo. Its signals live under $_stream,
 // local to the browser: the reports fill them in, and an action sends only
@@ -45,13 +48,13 @@ func choose(field string, value string) string {
 
 // pressed is the button of the tab's choice, as the server last said.
 func pressed(field, value string) string {
-	return `$_stream.` + field + ` === '` + value + `' ? 'true' : 'false'`
+	return ds.Aria(`$_stream.` + field + ` === '` + value + `'`)
 }
 
 // busy marks the button whose change is on its way; aria-busy reads an
 // empty value as false, so false removes it.
 func busy(field, value string) string {
-	return `$_stream.want === '` + field + `:` + value + `' ? 'true' : false`
+	return ds.AriaBusy(`$_stream.want === '` + field + `:` + value + `'`)
 }
 
 // settle ends the pending state when the tab's stream brings the op back.

@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the demo. Its signals live under
@@ -31,7 +32,7 @@ const start = `$_writerRace.op === '' && !$_writerRace.active && (
 // busy is aria-busy from the click until the stream brings the outcome:
 // data-attr writes true as an empty value, which aria-busy reads as
 // false.
-const busy = `$_writerRace.op !== '' ? 'true' : false`
+var busy = ds.AriaBusy(`$_writerRace.op !== ''`)
 
 // settle ends the pending state when the outcome arrives.
 const settle = `$_writerRace.op !== '' && $_writerRace.ack === $_writerRace.op && ($_writerRace.op = '')`

@@ -8,7 +8,6 @@ package checkboxes
 
 import (
 	"embed"
-	"io/fs"
 	"strconv"
 	"time"
 
@@ -53,7 +52,7 @@ var Demo = demo.Demo{
 	Title:      "A million checkboxes",
 	Summary:    "One grid of a million boxes for everyone: tick one, and every tab that has it in view sees it flip within a tick.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -66,11 +65,3 @@ var Demo = demo.Demo{
 
 //go:embed migrations
 var migrationFiles embed.FS
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}

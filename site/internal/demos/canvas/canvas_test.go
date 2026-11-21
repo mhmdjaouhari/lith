@@ -15,6 +15,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/demo/demotest"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 var (
@@ -366,7 +367,7 @@ func TestFace(t *testing.T) {
 
 func TestThousands(t *testing.T) {
 	for n, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 1234567: "1,234,567", -4096: "-4,096"} {
-		if got := thousands(n); got != want {
+		if got := format.Grouped(n); got != want {
 			t.Errorf("%d: %s", n, got)
 		}
 	}

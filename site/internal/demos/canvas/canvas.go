@@ -8,7 +8,6 @@ package canvas
 
 import (
 	"embed"
-	"io/fs"
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
@@ -66,7 +65,7 @@ var Demo = demo.Demo{
 	Title:      "Canvas",
 	Summary:    "Paint on one pixel canvas with everyone here: each stroke is a command, and one render a tick carries the board to every painter.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -74,12 +73,4 @@ var Demo = demo.Demo{
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
 	Sweep:      sweep,
-}
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
 }

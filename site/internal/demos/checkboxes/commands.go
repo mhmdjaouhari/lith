@@ -9,6 +9,7 @@ import (
 	"github.com/zweiundeins/lith/writer"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // Hub is what SetWindow asks of lith's live hub: to change what a tab's
@@ -45,7 +46,7 @@ const ClicksKey = Slug + ":clicks"
 
 func (c SetBox) Validate() error {
 	if c.Box < 0 || c.Box >= Boxes {
-		return fmt.Errorf("a box has a number from 1 to %s", grouped(Boxes))
+		return fmt.Errorf("a box has a number from 1 to %s", format.Grouped(Boxes))
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // probe is the frame of the report views: it reports on the stream that
@@ -166,7 +167,7 @@ func byteText(n int64) string {
 	f := float64(n)
 	switch {
 	case n < 10_000:
-		return thousands(n) + " B"
+		return format.Grouped(n) + " B"
 	case n < 100_000:
 		return decimals(f/1e3, 1) + " KB"
 	case n < 1_000_000:
@@ -207,7 +208,7 @@ func ratioText(events, wire int64) string {
 	if r < 10 {
 		return decimals(r, 1) + ":1"
 	}
-	return thousands(int64(math.Round(r))) + ":1"
+	return format.Grouped(int64(math.Round(r))) + ":1"
 }
 
 // decimals formats f with up to d decimals, without trailing zeros.

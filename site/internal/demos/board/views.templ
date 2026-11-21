@@ -6,6 +6,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/views"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // meStyle marks the viewer's own avatar, wherever the stream puts it: the
@@ -156,7 +157,7 @@ templ Stats(n Numbers) {
 			if n.Last.Moves > 0 {
 				<dl class="bd-tick__steps">
 					<div class="bd-tick__step">
-						<dt>{ plural(n.Last.Moves, "move", "moves") }</dt>
+						<dt>{ format.Plural(n.Last.Moves, "move", "moves") }</dt>
 						<dd>{ strconv.Itoa(n.Last.Moves) }</dd>
 					</div>
 					<div class="bd-tick__step bd-tick__step--render">
@@ -164,7 +165,7 @@ templ Stats(n Numbers) {
 						<dd>1</dd>
 					</div>
 					<div class="bd-tick__step">
-						<dt>{ plural(n.Last.Frames, "frame", "frames") }</dt>
+						<dt>{ format.Plural(n.Last.Frames, "frame", "frames") }</dt>
 						<dd>{ strconv.Itoa(n.Last.Frames) }</dd>
 					</div>
 				</dl>

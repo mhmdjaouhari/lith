@@ -513,6 +513,16 @@ export function must<T extends Element = HTMLElement>(root: ParentNode, selector
 	return e
 }
 
+/** v held between lo and hi. */
+export function clamp(v: number, lo: number, hi: number): number {
+	return Math.min(hi, Math.max(lo, v))
+}
+
+/** n with a comma between thousands, as Go's format.Grouped writes it: 12,345. */
+export function grouped(n: number): string {
+	return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+}
+
 /** Whether the point is inside the box. */
 export function within(r: DOMRect, x: number, y: number): boolean {
 	return x >= r.left && x < r.right && y >= r.top && y < r.bottom

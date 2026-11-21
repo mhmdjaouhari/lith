@@ -17,6 +17,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/demo/demotest"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 var me = demo.Viewer{Session: "s1", Tab: "t1"}
@@ -113,8 +114,8 @@ func TestWindowFor(t *testing.T) {
 
 func TestGrouped(t *testing.T) {
 	for n, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 999_937: "999,937", 1_000_000: "1,000,000", -1234: "-1,234"} {
-		if got := grouped(n); got != want {
-			t.Errorf("grouped(%d) = %q", n, got)
+		if got := format.Grouped(n); got != want {
+			t.Errorf("format.Grouped(%d) = %q", n, got)
 		}
 	}
 }

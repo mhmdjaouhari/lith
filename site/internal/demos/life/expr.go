@@ -1,9 +1,8 @@
 package life
 
 import (
-	"github.com/a-h/templ"
-
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the demo, built from the typed refs of its
@@ -15,7 +14,7 @@ import (
 // posts post the actions life.ts dispatches on the stage, whose requests
 // lith-ui's pending counts: requestCancellation 'disabled', so that every
 // batch of a stroke arrives and no action cancels the one before.
-var posts = merge(
+var posts = demo.Attrs(
 	DrawAction.On(demo.Post{RequestCancellation: "disabled"}),
 	DropAction.On(demo.Post{RequestCancellation: "disabled"}),
 	ResetAction.On(demo.Post{RequestCancellation: "disabled"}),
@@ -24,7 +23,7 @@ var posts = merge(
 
 // useTool picks a tool, and toolPressed is its button's aria-pressed.
 func useTool(name string) string     { return S.Tool.Assign(name) }
-func toolPressed(name string) string { return S.Tool.Eq(name) + " ? 'true' : 'false'" }
+func toolPressed(name string) string { return ds.Aria(S.Tool.Eq(name)) }
 
 // drawing is true while the tool draws: the field's crosshair, and the
 // turn button, which has nothing to turn.
@@ -35,13 +34,13 @@ var turn = S.Turn.String() + " = " + S.Turn.String() + " + 1"
 
 // picked and picking are a swatch's aria-pressed and aria-busy: data-attr
 // writes true as an empty value, which aria-busy reads as false.
-func picked(c int) string { return S.Colour.Eq(c) + " ? 'true' : 'false'" }
+func picked(c int) string { return ds.Aria(S.Colour.Eq(c)) }
 func picking(c int) string {
-	return S.Pick.Eq(c) + " && " + S.Colour.Ne(c) + " ? 'true' : false"
+	return ds.AriaBusy(S.Pick.Eq(c) + " && " + S.Colour.Ne(c))
 }
 
 // resetting is the reset button's aria-busy.
-var resetting = S.Resetting.String() + " ? 'true' : false"
+var resetting = ds.AriaBusy(S.Resetting.String())
 
 // marks are the stroke's cells, sent and not, as one SVG path; clearing
 // marks a stroke that clears.
@@ -72,13 +71,3 @@ var me = `'--me: var(--life-' + ' abcdefgh'[` + S.Colour.String() + `] + ')'`
 
 // The problem's line.
 var problem = S.Problem.String()
-
-func merge(as ...templ.Attributes) templ.Attributes {
-	out := templ.Attributes{}
-	for _, a := range as {
-		for k, v := range a {
-			out[k] = v
-		}
-	}
-	return out
-}

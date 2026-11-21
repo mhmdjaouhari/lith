@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // The payload is a table of made-up server metrics that changes every Step:
@@ -148,7 +149,7 @@ func cell(row, col int, ep int64) string {
 	u := unit(mix(uint64(row)<<40 ^ uint64(col)<<32 ^ uint64(ep)*0x9e3779b97f4a7c15))
 	switch col {
 	case 0: // requests a second
-		return thousands(int64((300 + level*4500) * (0.82 + 0.36*u)))
+		return format.Grouped(int64((300 + level*4500) * (0.82 + 0.36*u)))
 	case 1: // median latency
 		return strconv.FormatFloat((0.6+level*3.6)*(0.85+0.3*u), 'f', 1, 64)
 	case 2: // tail latency
@@ -162,22 +163,6 @@ func cell(row, col int, ep int64) string {
 		return "0"
 	}
 	return strconv.Itoa(1 + int((u-0.8)*45))
-}
-
-// thousands formats n with a comma between thousands.
-func thousands(n int64) string {
-	s := strconv.FormatInt(n, 10)
-	if n < 0 || len(s) <= 3 {
-		return s
-	}
-	b := make([]byte, 0, len(s)+len(s)/3)
-	for i := range len(s) {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			b = append(b, ',')
-		}
-		b = append(b, s[i])
-	}
-	return string(b)
 }
 
 // Payload is the table at one step.
@@ -283,12 +268,12 @@ func (c *memo) get(ctx context.Context, k key) ([]byte, error) {
 // caption says what the table holds and how often it changes.
 func caption(p Payload) string {
 	cells := len(p.Rows) * cols
-	s := strconv.Itoa(len(p.Rows)) + " rows, " + thousands(int64(cells)) + " cells. "
+	s := strconv.Itoa(len(p.Rows)) + " rows, " + format.Grouped(int64(cells)) + " cells. "
 	switch p.Changes {
 	case 0:
 		return s + "Still: nothing changes, so your stream sends nothing. After 20 s of silence the hub sends a heartbeat, and after a minute it gives a zstd encoder back to the pool; pick a churn again, and the next report shows both."
 	case 1:
 		return s + "Every 250 ms one cell changes."
 	}
-	return s + "Every 250 ms " + thousands(int64(p.Changes)) + " cells change."
+	return s + "Every 250 ms " + format.Grouped(int64(p.Changes)) + " cells change."
 }

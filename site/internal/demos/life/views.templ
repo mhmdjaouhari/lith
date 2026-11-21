@@ -3,6 +3,8 @@ package life
 import (
 	"strconv"
 	"time"
+
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // Stage is the demo on its page: the counters, the board with the
@@ -117,11 +119,11 @@ templ Stats(b Board, here int) {
 		<dl>
 			<div class="life__stat">
 				<dt>Generation</dt>
-				<dd>{ number(b.Generation) }</dd>
+				<dd>{ format.Grouped(b.Generation) }</dd>
 			</div>
 			<div class="life__stat">
 				<dt>Population</dt>
-				<dd>{ number(int64(Population(b.Cells))) }</dd>
+				<dd>{ format.Grouped(int64(Population(b.Cells))) }</dd>
 			</div>
 			<div class="life__stat">
 				<dt>Per second</dt>

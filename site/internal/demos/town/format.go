@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demos/board"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // label names a tile as a map does: its column's letter and its row's
@@ -100,14 +101,6 @@ func clock(t time.Time) string { return t.UTC().Format("15:04:05") }
 
 func stamp(t time.Time) string { return t.UTC().Format("2 Jan 2006, 15:04:05 UTC") }
 
-func grouped(n int64) string {
-	s := strconv.FormatInt(n, 10)
-	for i := len(s) - 3; i > 0; i -= 3 {
-		s = s[:i] + "," + s[i:]
-	}
-	return s
-}
-
 // kindAttr is a kind as the page's CSS selects it.
 func kindAttr(kind string) string {
 	if kind == Grass {
@@ -121,5 +114,5 @@ func boardLabel(m moment) string {
 	if m.At == 0 {
 		return "The town now"
 	}
-	return "The town at position " + grouped(m.At)
+	return "The town at position " + format.Grouped(m.At)
 }

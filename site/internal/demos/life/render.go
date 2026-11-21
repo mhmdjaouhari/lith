@@ -76,18 +76,6 @@ func trailAt(trail []byte, i int) byte {
 	return trail[i]
 }
 
-// number writes n with a comma between thousands: 12,345.
-func number(n int64) string {
-	s := strconv.FormatInt(n, 10)
-	if n < 0 {
-		return "-" + number(-n)
-	}
-	for i := len(s) - 3; i > 0; i -= 3 {
-		s = s[:i] + "," + s[i:]
-	}
-	return s
-}
-
 // tenths writes a number of tenths with one decimal: 10.0.
 func tenths(n int) string { return strconv.Itoa(n/10) + "." + strconv.Itoa(n%10) }
 

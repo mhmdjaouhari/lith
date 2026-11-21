@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // fresh is how long a race that ended counts as arriving: its result and
@@ -77,7 +79,7 @@ func said(o outcome) string {
 	case "running":
 		return name + "on the track now." + again
 	case "done":
-		return name + group(int64(r.Rate())) + " commands a second, " + strconv.FormatFloat(r.PerTx(), 'f', 0, 64) + " to a transaction."
+		return name + format.Grouped(int64(r.Rate())) + " commands a second, " + strconv.FormatFloat(r.PerTx(), 'f', 0, 64) + " to a transaction."
 	case "failed":
 		return name + "its writer failed."
 	case "dropped":
@@ -120,7 +122,7 @@ func (b bar) title() string {
 		n, _ := strconv.Atoi(b.Label)
 		size = fmt.Sprintf("%d to %d commands", n, 2*n-1)
 	}
-	return size + ": " + group(b.N) + " transactions"
+	return size + ": " + format.Grouped(b.N) + " transactions"
 }
 
 // gridPath draws the chart's three guide lines, at a quarter, half and

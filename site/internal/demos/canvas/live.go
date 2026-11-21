@@ -11,6 +11,7 @@ import (
 	"github.com/zweiundeins/lith/live"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // The views' keys. None carries anything of the viewer: every painter's
@@ -164,16 +165,9 @@ func describe(p Painter) string {
 		s += ", " + colorNames[p.Color]
 	}
 	if p.Pixels > 0 {
-		s += ", " + plural(p.Pixels, "pixel", "pixels") + " in the last minute"
+		s += ", " + format.Plural(p.Pixels, "pixel", "pixels") + " in the last minute"
 	}
 	return s
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
 }
 
 // bar is a second's bar in the pulse, its height a share of the busiest
@@ -183,13 +177,4 @@ func bar(n, peak int) string {
 		return "--h: 0"
 	}
 	return "--h: " + strconv.FormatFloat(float64(n)/float64(max(peak, 20)), 'f', 2, 64)
-}
-
-// thousands writes n with a comma every three digits: 12,345.
-func thousands(n int) string {
-	s := strconv.Itoa(n)
-	for i := len(s) - 3; i > 0 && s[i-1] != '-'; i -= 3 {
-		s = s[:i] + "," + s[i:]
-	}
-	return s
 }

@@ -80,13 +80,6 @@ func ceiling(s []int) int {
 	}
 }
 
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
-}
-
 func rate(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) }
 
 // series is the sparkline's values attribute, a JSON array.

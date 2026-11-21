@@ -9,10 +9,8 @@
 // the next generation's frame, which the stream morphs into the board,
 // shows it.
 
-import { commands, controller, measured, must, num, orderedOpId, pending, signals } from 'lith-ui'
+import { clamp, commands, controller, measured, must, num, orderedOpId, pending, signals } from 'lith-ui'
 import { AttrColour, AttrReset, CellClasses, ClassCursor, ClassField, ClassMarks, type Commands, FlushMillis, H, IdBoard, IdRow, type Roots, StrokeBatch, W } from './ds.gen'
-
-const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v))
 
 controller('life', (el, scope) => {
 	const s = signals<Roots>()._life

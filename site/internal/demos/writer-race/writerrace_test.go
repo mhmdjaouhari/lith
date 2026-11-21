@@ -19,6 +19,7 @@ import (
 
 	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/demo/demotest"
+	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 var me = demo.Viewer{Session: "s1", Tab: "t1"}
@@ -437,8 +438,8 @@ func TestRates(t *testing.T) {
 		}
 	}
 	for n, w := range map[int64]string{0: "0", 999: "999", 1000: "1,000", 66688: "66,688", 1234567: "1,234,567", -5000: "-5,000"} {
-		if got := group(n); got != w {
-			t.Errorf("group(%d) = %q", n, got)
+		if got := format.Grouped(n); got != w {
+			t.Errorf("format.Grouped(%d) = %q", n, got)
 		}
 	}
 	for n, w := range map[int]string{2: "2nd", 3: "3rd", 4: "4th", 11: "11th", 21: "21st"} {

@@ -8,7 +8,6 @@ package board
 
 import (
 	"embed"
-	"io/fs"
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
@@ -123,7 +122,7 @@ var Demo = demo.Demo{
 	Title:      "Shared board",
 	Summary:    "Drag a card to another lane: the board renders once in the next tick, and every open tab sees it glide there.",
 	Art:        art,
-	Migrations: mustSub("migrations"),
+	Migrations: demo.MustSub(migrationFiles, "migrations"),
 	Server:     server,
 	How:        how,
 	CSS:        css,
@@ -137,11 +136,3 @@ var Demo = demo.Demo{
 
 //go:embed migrations
 var migrationFiles embed.FS
-
-func mustSub(dir string) fs.FS {
-	f, err := fs.Sub(migrationFiles, dir)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}

@@ -1,6 +1,10 @@
 package checkboxes
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/zweiundeins/lith/site/internal/format"
+)
 
 // Stage is the demo on its page: the numbers, the jump field, and the grid
 // at the tab's window, its tiles drawn from the document's read. The
@@ -31,7 +35,7 @@ templ Stage(w Window, tiles []shown, s Stats) {
 			<div class="cb-where" aria-hidden="true">
 				<span>#1</span>
 				<i class="cb-where__rail"><b class="cb-where__mark"></b></i>
-				<span>#{ grouped(Boxes) }</span>
+				<span>#{ format.Grouped(Boxes) }</span>
 			</div>
 			@Board(w, tiles)
 		</div>
@@ -51,16 +55,16 @@ templ StatsBar(s Stats) {
 	<dl id={ IdStats } class="cb-stats">
 		<div class="cb-stat">
 			<dt>boxes checked</dt>
-			<dd>{ grouped(s.Checked) }</dd>
+			<dd>{ format.Grouped(s.Checked) }</dd>
 		</div>
 		<div class="cb-stat cb-stat--rate">
 			<dt>toggles per second</dt>
-			<dd>{ grouped(s.PerSecond()) }</dd>
+			<dd>{ format.Grouped(s.PerSecond()) }</dd>
 			<sb-sparkline class="cb-stat__trend" values={ rateJSON(s.Rate) } length={ strconv.Itoa(Trend) } scale="fixed" min="0" max={ strconv.Itoa(s.Peak()) } tone="brand" label="Toggles per second, the last 30 seconds"></sb-sparkline>
 		</div>
 		<div class="cb-stat">
 			<dt>people here</dt>
-			<dd>{ grouped(s.Here) }</dd>
+			<dd>{ format.Grouped(s.Here) }</dd>
 		</div>
 	</dl>
 }

@@ -1,6 +1,10 @@
 package town
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/zweiundeins/lith/site/internal/format"
+)
 
 // Stage is the demo on its page: the palette, the town, the slider under
 // it and the events around its position. The stage itself is never
@@ -89,14 +93,14 @@ templ When(m moment) {
 		if m.At == 0 {
 			<b>Now</b>
 			if len(m.Earlier) > 0 {
-				<span>position { grouped(m.Earlier[0].Position) }</span>
+				<span>position { format.Grouped(m.Earlier[0].Position) }</span>
 			}
 		} else if m.Gone != 0 {
-			<b>Position { grouped(m.Gone) } is gone</b>
-			<span>the town keeps its newest { grouped(Kept) } events and a snapshot of each tile from before them: the slider starts here</span>
+			<b>Position { format.Grouped(m.Gone) } is gone</b>
+			<span>the town keeps its newest { format.Grouped(Kept) } events and a snapshot of each tile from before them: the slider starts here</span>
 		} else if len(m.Earlier) > 0 {
 			<b>{ stamp(m.Earlier[0].At) }</b>
-			<span>position { grouped(m.At) }</span>
+			<span>position { format.Grouped(m.At) }</span>
 		}
 	</h3>
 }
