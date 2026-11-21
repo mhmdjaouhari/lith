@@ -30,7 +30,8 @@ var (
 // and in development. In production the site's own go out minified, and
 // the vendored builds byte for byte as their integrity says, lith's
 // Datastar build and newest-frame.js among them; in development every file
-// goes out as written. With -v it lists the sizes, raw and under brotli
+// goes out as written, and a demo's controller, bundled as the site starts,
+// unminified. With -v it lists the sizes, raw and under brotli
 // -11.
 func TestMinified(t *testing.T) {
 	prod, prodPage := pageAssets(t, false)
@@ -64,6 +65,12 @@ func TestMinified(t *testing.T) {
 		case strings.HasPrefix(name, "vendor/") || name == "lith/"+live.NewestFrame:
 			if string(p) != string(d) || string(p) != string(file) {
 				t.Errorf("%s: %d bytes in production, %d in development, %d as written", name, len(p), len(d), len(file))
+			}
+		case strings.HasPrefix(name, "demos/"):
+			// A demo's controller, which ui.Bundle builds from its TypeScript
+			// as the site starts: no file holds it as written.
+			if len(p) >= len(d) || !strings.Contains(string(d), "\n  ") {
+				t.Errorf("%s: %d bytes in production, %d in development", name, len(p), len(d))
 			}
 		case name == "site.css":
 			if len(p) >= len(d) || !strings.Contains(string(d), "/*") || strings.Contains(string(p), "/*") {
