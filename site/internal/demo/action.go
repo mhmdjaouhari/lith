@@ -215,6 +215,13 @@ func PendingOf(s PendingSignalsRefs) Pending {
 	}
 }
 
+// Within is p for an element whose requests go out from the buttons in it
+// too, a group of choices that listens for them all.
+func (p Pending) Within() Pending {
+	p.Match = "el.contains(evt.detail.el)"
+	return p
+}
+
 // Fetched is the data-on:datastar-fetch of the elements whose actions
 // carry the op. It counts the op's requests in flight, ends the pending
 // state when one never got through (retries-failed) or answered a status

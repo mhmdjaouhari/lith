@@ -165,14 +165,14 @@ func TestViews(t *testing.T) {
 	if p, ok := render(0).(demo.Probe); !ok || p.(probe).embed {
 		t.Fatalf("the report's frame: %T", p)
 	}
-	if b := string(render(1).([]byte)); !strings.Contains(b, `"_stream":{"size":"large","churn":"calm","ack":"","synced":true}`) {
+	if b := string(render(1).([]byte)); !strings.Contains(b, `"_stream":{"ack":"","churn":"calm","size":"large","synced":true}`) {
 		t.Errorf("a new tab's choices:\n%s", b)
 	}
 	if b := render(2).([]byte); strings.Count(string(b), "<tr>") != 257 {
 		t.Errorf("a new tab's table has %d rows", strings.Count(string(b), "<tr>")-1)
 	}
 	e.Do(t, SetPayload{Viewer: me, Op: "op1", Size: Small, Churn: Still, At: time.Now()})
-	if b := string(render(1).([]byte)); !strings.Contains(b, `{"size":"small","churn":"still","ack":"op1","synced":true}`) {
+	if b := string(render(1).([]byte)); !strings.Contains(b, `{"ack":"op1","churn":"still","size":"small","synced":true}`) {
 		t.Errorf("the choices after a change:\n%s", b)
 	}
 	b, ok := render(2).([]byte)
@@ -190,7 +190,7 @@ func TestViews(t *testing.T) {
 		}
 		return c.Render(ctx, &page)
 	})
-	if !strings.Contains(page.String(), `size: &#39;small&#39;, churn: &#39;still&#39;`) || strings.Count(page.String(), "<tr>") != 17 {
+	if !strings.Contains(page.String(), `&#34;size&#34;:&#34;small&#34;,&#34;churn&#34;:&#34;still&#34;`) || strings.Count(page.String(), "<tr>") != 17 {
 		t.Errorf("the page of a small still table: %d rows\n%.600s", strings.Count(page.String(), "<tr>"), page.String())
 	}
 }

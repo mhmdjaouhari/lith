@@ -59,10 +59,13 @@ func (r Ref[T]) To(e Value) Expr { return Expr(string(r) + " = " + e.js()) }
 // Inc adds one to the signal, a number.
 func (r Ref[T]) Inc() Expr { return Expr(string(r) + " = " + string(r) + " + 1") }
 
-// Eq, Ne, Lt and Ge compare the signal with v: ===, !==, < and >=.
+// Eq, Ne, Lt, Le, Gt and Ge compare the signal with v: ===, !==, <, <=,
+// > and >=.
 func (r Ref[T]) Eq(v T) Expr { return r.cmp("===", Val(v)) }
 func (r Ref[T]) Ne(v T) Expr { return r.cmp("!==", Val(v)) }
 func (r Ref[T]) Lt(v T) Expr { return r.cmp("<", Val(v)) }
+func (r Ref[T]) Le(v T) Expr { return r.cmp("<=", Val(v)) }
+func (r Ref[T]) Gt(v T) Expr { return r.cmp(">", Val(v)) }
 func (r Ref[T]) Ge(v T) Expr { return r.cmp(">=", Val(v)) }
 
 // Is is true while the signal equals o, AtLeast while it is o or after

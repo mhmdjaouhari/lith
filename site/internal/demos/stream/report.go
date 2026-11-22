@@ -82,18 +82,16 @@ type (
 	}
 )
 
-// PageReport is the demo page's report, $_stream.
+// PageReport is the demo page's report, $_stream: the slot's, and what
+// only the page shows.
+//
+//ds:signals
 type PageReport struct {
-	N        int64   `json:"n"`        // frames before this one
-	Coding   string  `json:"coding"`   // "zstd", "brotli", "gzip", "none"
-	Tier     string  `json:"tier"`     // "zstd 2^19", "uncompressed"
+	EmbedReport
 	Heap     string  `json:"heap"`     // "1.7 MiB"
 	Events   string  `json:"events"`   // bytes of events so far
 	Wire     string  `json:"wire"`     // bytes on the wire so far
-	Total    string  `json:"total"`    // their ratio, "69:1"
 	FE       string  `json:"fe"`       // the last frame: bytes of events
-	FW       int64   `json:"fw"`       // the last frame: bytes on the wire
-	FWT      string  `json:"fwt"`      // the same, formatted
 	FR       int64   `json:"fr"`       // the last frame: its ratio in tenths, 691 for 69.1:1
 	Ratio    string  `json:"ratio"`    // the same, formatted
 	FP       float64 `json:"fp"`       // the last frame: wire in percent of its events
@@ -108,20 +106,22 @@ type PageReport struct {
 }
 
 // EmbedReport is the landing page slot's report.
+//
+//ds:signals
 type EmbedReport struct {
-	N      int64  `json:"n"`
-	Coding string `json:"coding"`
-	Tier   string `json:"tier"`
-	Total  string `json:"total"`
-	FW     int64  `json:"fw"`
-	FWT    string `json:"fwt"`
+	N      int64  `json:"n"`      // frames before this one
+	Coding string `json:"coding"` // "zstd", "brotli", "gzip", "none"
+	Tier   string `json:"tier"`   // "zstd 2^19", "uncompressed"
+	Total  string `json:"total"`  // bytes of events to bytes on the wire so far, "69:1"
+	FW     int64  `json:"fw"`     // the last frame: bytes on the wire
+	FWT    string `json:"fwt"`    // the same, formatted
 }
 
 func (r Reading) page() PageReport {
 	p := PageReport{
-		N: r.Frames, Coding: codingName(r.Coding), Tier: tierName(r.Tier), Heap: mibText(r.Heap),
-		Events: byteText(r.Events), Wire: byteText(r.Wire), Total: ratioText(r.Events, r.Wire),
-		FE: byteText(r.Last.Events), FW: r.Last.Wire, FWT: byteText(r.Last.Wire),
+		EmbedReport: r.embed(), Heap: mibText(r.Heap),
+		Events: byteText(r.Events), Wire: byteText(r.Wire),
+		FE:  byteText(r.Last.Events),
 		FPS: strconv.FormatFloat(r.FPS, 'f', 1, 64), Beats: r.Beats,
 		Reserved: mibText(r.Budget.Reserved), Limit: mibText(r.Budget.Limit), Budget: -1,
 		Tiers: tiersText(r.Budget.Streams),

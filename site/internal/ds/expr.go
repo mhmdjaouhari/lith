@@ -66,6 +66,14 @@ func Do(steps ...Value) Expr {
 	return Expr(strings.Join(parts, ", "))
 }
 
+// Cond is a while cond holds, else b: cond ? a : b.
+func Cond(cond, a, b Value) Expr {
+	return Expr(operand(cond) + " ? " + operand(a) + " : " + operand(b))
+}
+
+// Max is the largest of vs, numbers: Math.max.
+func Max(vs ...Value) Expr { return Expr("Math.max(" + join(vs, ", ") + ")") }
+
 // If runs steps while cond holds: cond && (steps...).
 func If(cond Value, steps ...Value) Expr {
 	if len(steps) == 0 {
@@ -93,6 +101,20 @@ func Call(name string, args ...Value) Expr {
 		parts[i] = a.js()
 	}
 	return Expr("@" + name + "(" + strings.Join(parts, ", ") + ")")
+}
+
+// Invoke calls the element's own method name with args, when the element
+// has one: a component's, such as sb-sparkline's push, which an
+// expression reaches as el.
+func Invoke(name string, args ...Value) Expr {
+	if !actionName.MatchString(name) {
+		panic(fmt.Sprintf("ds: bad method name %q", name))
+	}
+	parts := make([]string, len(args))
+	for i, a := range args {
+		parts[i] = a.js()
+	}
+	return Expr("el." + name + " && el." + name + "(" + strings.Join(parts, ", ") + ")")
 }
 
 // OpID is a new op id, random: for a page without a controller (the

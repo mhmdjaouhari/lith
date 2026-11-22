@@ -9,6 +9,7 @@ import (
 	"github.com/zweiundeins/lith/live"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: the readout, which the
@@ -47,16 +48,6 @@ func reportView(embed bool) live.View {
 	}
 }
 
-// choices are the tab's payload, and the op id of its last change.
-type choices struct {
-	S struct {
-		Size   Size   `json:"size"`
-		Churn  Churn  `json:"churn"`
-		Ack    string `json:"ack"`
-		Synced bool   `json:"synced"` // the stream the page opened brought the tab's row (demo.Pending)
-	} `json:"_stream"`
-}
-
 // tabView patches the tab's choices into the page's signals, which press
 // the controls' buttons, with the op id that ends the pending state.
 func tabView(v demo.Viewer) live.View {
@@ -69,9 +60,12 @@ func tabView(v demo.Viewer) live.View {
 			if err := demo.LoadTab(ctx, demo.Querier(ctx, tx), Slug, v, &st); err != nil {
 				return nil, err
 			}
-			var c choices
-			c.S.Size, c.S.Churn, c.S.Ack, c.S.Synced = st.size(), st.churn(), st.Op, true
-			return demo.Signals(c)
+			return demo.Signals(ds.Tree(
+				S.Size.Set(st.size()),
+				S.Churn.Set(st.churn()),
+				S.Ack.Set(st.Op),
+				S.Synced.Set(true), // the stream the page opened brought the tab's row (demo.Pending)
+			))
 		},
 	}
 }

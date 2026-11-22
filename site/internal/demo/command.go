@@ -119,18 +119,27 @@ func From[T any](key string, r ds.Ref[T]) Arg {
 	return Arg{key: key, expr: r.String(), typ: reflect.TypeFor[T]()}
 }
 
+// Value fills the payload's key with v, the same for every post: the
+// stream demo's size button sends its size.
+func Value[T any](key string, v T) Arg {
+	return Arg{key: key, expr: ds.Lit(v), typ: reflect.TypeFor[T]()}
+}
+
 // PostSignals is the expression that posts the action with its payload
-// read from the page's signals, and the tab id: what a form without a
-// controller sends (the guestbook's name and message). It panics unless
-// args fill every key of Req but the tab, each once and with a signal of
-// the field's type, and no other key: called as a package's expressions
-// are built, so a payload the server would refuse fails the package's
-// tests, not a person's click.
+// read from the page's signals (From) or fixed (Value), and the tab id:
+// what a form without a controller sends (the guestbook's name and
+// message). It panics unless args fill every key of Req but the tab and
+// those tagged omitempty, each once and with a value of the field's type,
+// and no other key: called as a package's expressions are built, so a
+// payload the server would refuse fails the package's tests, not a
+// person's click.
 func (c Command[Req]) PostSignals(o Post, args ...Arg) ds.Expr {
 	want := map[string]reflect.Type{}
+	optional := map[string]bool{}
 	for _, f := range mustFields[Req]() {
 		if f.Key != "tab" {
 			want[f.Key] = f.Type
+			optional[f.Key] = f.Optional
 		}
 	}
 	parts := make([]string, 0, len(args)+1)
@@ -146,7 +155,9 @@ func (c Command[Req]) PostSignals(o Post, args ...Arg) ds.Expr {
 		parts = append(parts, ds.Lit(a.key)+": "+a.expr)
 	}
 	for key := range want {
-		panic(fmt.Sprintf("demo: %s needs %q", c.URL(), key))
+		if !optional[key] {
+			panic(fmt.Sprintf("demo: %s needs %q", c.URL(), key))
+		}
 	}
 	return c.post("{"+strings.Join(append(parts, "tab: "+Tab.String()), ", ")+"}", o)
 }

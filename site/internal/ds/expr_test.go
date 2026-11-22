@@ -29,6 +29,11 @@ func TestExpr(t *testing.T) {
 		{Aria(op.Eq("a")), `($_x.op === "a") ? 'true' : 'false'`},
 		{AriaBusy(on), `$_x.on ? 'true' : false`},
 		{Trimmed(op), `($_x.op).trim()`},
+		{n.Gt(0), `$_x.n > 0`},
+		{n.Le(1), `$_x.n <= 1`},
+		{Cond(n.Ge(3), Val("KB"), op), `($_x.n >= 3) ? "KB" : $_x.op`},
+		{Max(Val(0), n), `Math.max(0, $_x.n)`},
+		{If(on, Invoke("push", n)), `$_x.on && (el.push && el.push($_x.n))`},
 	} {
 		if c.got != c.want {
 			t.Errorf("got %s, want %s", c.got, c.want)
