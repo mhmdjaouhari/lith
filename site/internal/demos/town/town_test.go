@@ -211,7 +211,7 @@ func TestViews(t *testing.T) {
 		}
 		frame := f.(demo.Frame)
 		if !strings.Contains(string(frame.First), `"hello":true`) || strings.Contains(string(frame.Next), "hello") ||
-			!strings.Contains(string(frame.Next), `{"_town":{"at":3,"seq":1,"ack":"","ok":false,"synced":true}}`) {
+			!strings.Contains(string(frame.Next), `{"_town":{"ack":"","at":3,"ok":false,"seq":1,"synced":true}}`) {
 			t.Errorf("the tab's view:\n%s", frame.First)
 		}
 		last := len(start) + 1 // the starting town and Ada's house
@@ -246,7 +246,7 @@ func TestViews(t *testing.T) {
 		}
 		var html strings.Builder
 		page.Render(ctx, &html)
-		for _, want := range []string{`<symbol id="town-house"`, `data-bind:_town.want`, fmt.Sprintf(`max="%d"`, last), `data-on:input__throttle.50ms.trailing`} {
+		for _, want := range []string{`<symbol id="town-house"`, `data-bind="_town.want"`, fmt.Sprintf(`max="%d"`, last), `data-on:input__throttle.50ms.trailing`} {
 			if !strings.Contains(html.String(), want) {
 				t.Errorf("the page has no %s", want)
 			}

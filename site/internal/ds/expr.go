@@ -71,6 +71,11 @@ func Cond(cond, a, b Value) Expr {
 	return Expr(operand(cond) + " ? " + operand(a) + " : " + operand(b))
 }
 
+// Grouped is v, a number, as people read it: 12,345. The parens keep
+// .toLocaleString out of the signal's path, which dscheck reads up to the
+// last dot.
+func Grouped(v Value) Expr { return Expr("(" + v.js() + ").toLocaleString('en')") }
+
 // Max is the largest of vs, numbers: Math.max.
 func Max(vs ...Value) Expr { return Expr("Math.max(" + join(vs, ", ") + ")") }
 

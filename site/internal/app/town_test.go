@@ -38,7 +38,7 @@ func TestTownStream(t *testing.T) {
 	if code := post(t, c, base+"/cmd/town/seek", `{"tab":"tab1","at":9,"seq":1}`); code != http.StatusNoContent {
 		t.Fatalf("seek: %d", code)
 	}
-	past := townNext(t, events, `data-at="9"`, `{"_town":{"at":9,"seq":1,"ack":"","ok":false,"synced":true}}`, `id="town-later"`)
+	past := townNext(t, events, `data-at="9"`, `{"_town":{"ack":"","at":9,"ok":false,"seq":1,"synced":true}}`, `id="town-later"`)
 	if !strings.Contains(past, `data-t="44" data-k="water" aria-disabled="true"`) || strings.Contains(past, `data-k="house"`) {
 		t.Errorf("the town at 9:\n%s", past)
 	}
@@ -125,7 +125,7 @@ func TestTown(t *testing.T) {
 		p.Wait(t, `document.querySelector('#town-map [data-t="0"]').dataset.k === 'house'`, 5*time.Second)
 		p.Wait(t, fmt.Sprintf(`document.querySelector('.town-slider').max === '%d'`, head+1), 5*time.Second)
 	}
-	ada.Wait(t, `!document.querySelector('style[data-text]').textContent`, 2*time.Second)
+	ada.Wait(t, `getComputedStyle(document.querySelector('#town-map [data-t="0"]')).getPropertyValue('--town-wait').trim() === ''`, 2*time.Second)
 
 	// Bob drags the slider to its start, then steps to position 9 with the
 	// keyboard: the river without its bridge, no houses yet.

@@ -3,6 +3,7 @@ package town
 import (
 	"strconv"
 
+	"github.com/zweiundeins/lith/site/internal/ds"
 	"github.com/zweiundeins/lith/site/internal/format"
 )
 
@@ -12,9 +13,8 @@ import (
 // up to the tab's position (the town now, or as of a position), the
 // events after it, and the tab's outcome.
 templ Stage(b Bounds, m moment, me string) {
-	<div class="town" data-signals={ signals(b) } data-effect={ settle }>
+	<div class="town" data-signals={ NewSignals(b).Decl() } data-town data-effect={ settle }>
 		@spriteSheet
-		<style data-text={ waiting }></style>
 		<span hidden data-effect={ greet }></span>
 		<span hidden data-effect={ badge }></span>
 		<div class="town__layout">
@@ -23,7 +23,7 @@ templ Stage(b Bounds, m moment, me string) {
 					<legend class="visually-hidden">What to build</legend>
 					for _, k := range Tools {
 						<label class="town-tool" data-k={ kindAttr(k) }>
-							<input type="radio" name="town-tool" value={ k } data-bind:_town.tool data-attr:disabled="$_town.at !== 0"/>
+							<input type="radio" name="town-tool" value={ k } data-bind={ S.Tool.Path() } data-attr:disabled={ past }/>
 							<span class="town-tool__icon" aria-hidden="true" style={ hue(me) }>
 								@templ.Raw(toolGlyph(k))
 							</span>
@@ -32,39 +32,39 @@ templ Stage(b Bounds, m moment, me string) {
 					}
 				</fieldset>
 				<div
-					class="town-board"
-					data-on:click={ place }
-					data-on:keydown={ keys }
+					class={ ClassBoard }
+					data-on:click={ ds.Call(ActPlace) }
+					data-on:keydown={ ds.Call(ActKey) }
 					data-on:datastar-fetch={ placeFetched }
 					data-on-signal-patch={ placing.LostExpr() }
 					data-on-signal-patch-filter={ placing.LostFilter() }
-					data-class:is-past="$_town.at !== 0"
+					data-class:is-past={ past }
 					data-attr:aria-busy={ pending }
+					{ placePosts... }
 				>
 					@Board(m)
 				</div>
-				<div class="town-time" data-on:datastar-fetch={ seekFetched } data-on-signal-patch={ seeking.LostExpr() } data-on-signal-patch-filter={ seeking.LostFilter() }>
+				<div class={ ClassTime } data-on:datastar-fetch={ seekFetched } data-on-signal-patch={ seeking.LostExpr() } data-on-signal-patch-filter={ seeking.LostFilter() } { seekPosts... }>
 					<input
 						type="range"
-						class="town-slider"
+						class={ ClassSlider }
 						min={ strconv.FormatInt(b.First, 10) }
 						max={ strconv.FormatInt(b.Head, 10) }
 						value={ strconv.FormatInt(b.Head, 10) }
 						step="1"
 						aria-label="Position in the town's history"
-						data-bind:_town.want
-						data-effect={ edges }
+						data-bind={ S.Want.Path() }
 						data-attr:aria-valuetext={ posLabel }
-						{ drag()... }
+						{ drag... }
 					/>
 					<div class="town-time__row">
 						<output class="town-time__pos" data-text={ posLabel }>Now</output>
-						<button type="button" class="btn btn--sm" data-on:click={ now } data-attr:disabled="$_town.at === 0 && +$_town.want >= $_town.head">Now</button>
+						<button type="button" class="btn btn--sm" data-on:click={ ds.Call(ActNow) } data-attr:disabled={ atEnd }>Now</button>
 					</div>
 				</div>
-				<p class="town-past" style="display: none" data-show="$_town.at !== 0">This is the town as it was. Press <b>Now</b> to build again.</p>
+				<p class="town-past" style="display: none" data-show={ past }>This is the town as it was. Press <b>Now</b> to build again.</p>
 				@Outcome(TabState{})
-				<p class="outcome is-problem" role="alert" style="display: none" data-show="$_town.problem" data-text="$_town.problem"></p>
+				<p class="outcome is-problem" role="alert" style="display: none" data-show={ S.Problem } data-text={ S.Problem }></p>
 			</div>
 			<section class="town-log" aria-labelledby="town-when">
 				@When(m)

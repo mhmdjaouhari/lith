@@ -11,6 +11,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: a new tab is at now.
@@ -70,9 +71,13 @@ func tabView(v demo.Viewer) live.View {
 			if err != nil {
 				return nil, err
 			}
-			var a ack
-			a.Town.At, a.Town.Seq, a.Town.Ack, a.Town.OK, a.Town.Synced = s.At, s.Seq, s.Op, s.Op != "" && s.Refusal == "", true
-			signals, err := demo.Signals(a)
+			signals, err := demo.Signals(ds.Tree(
+				S.At.Set(s.At),
+				S.Seq.Set(s.Seq),
+				S.Ack.Set(s.Op),
+				S.OK.Set(s.Op != "" && s.Refusal == ""),
+				S.Synced.Set(true), // the stream the page opened brought the tab's row (demo.Pending)
+			))
 			if err != nil {
 				return nil, err
 			}
@@ -82,18 +87,8 @@ func tabView(v demo.Viewer) live.View {
 	}
 }
 
-// ack is the tab's state as the page's signals take it.
-type ack struct {
-	Town struct {
-		At     int64  `json:"at"`
-		Seq    int64  `json:"seq"`
-		Ack    string `json:"ack"`
-		OK     bool   `json:"ok"`
-		Synced bool   `json:"synced"` // the stream the page opened brought the tab's row (demo.Pending)
-	} `json:"_town"`
-}
-
-var hello = sse.PatchSignals([]byte(`{"_town":{"hello":true}}`), false)
+// hello asks the page to say hello (greet).
+var hello = sse.PatchSignals([]byte(ds.Lit(ds.Tree(S.Hello.Set(true)))), false)
 
 // headView is the slider's ends, the same for every tab. For a tab in the
 // past it is what new events render again, with the events after a
@@ -107,7 +102,7 @@ func headView() live.View {
 			if err != nil {
 				return nil, err
 			}
-			return demo.Signals(map[string]any{"_town": map[string]int64{"first": b.First, "head": b.Head}})
+			return demo.Signals(ds.Tree(S.First.Set(b.First), S.Head.Set(b.Head)))
 		},
 	}
 }

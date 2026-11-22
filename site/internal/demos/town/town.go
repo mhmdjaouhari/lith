@@ -17,13 +17,20 @@ import (
 	"github.com/zweiundeins/lith/site/internal/demo"
 )
 
+const Slug = "town"
+
+// The town's size, which town.ts reads from ds.gen.ts.
+//
+//ds:const
 const (
-	Slug = "town"
 	// Cols and Rows are the town's size in tiles; a tile's number counts
 	// from 0, left to right and top to bottom.
 	Cols  = 12
 	Rows  = 8
 	Tiles = Cols * Rows
+)
+
+const (
 	// Kept is how many events the sweep keeps, the newest, besides a
 	// snapshot of each tile from before them: the slider starts at the
 	// newest snapshot.
@@ -79,6 +86,8 @@ var (
 	css string
 	//go:embed migrations
 	migrationFiles embed.FS
+	//go:embed town.ts ds.gen.ts
+	script embed.FS
 )
 
 // Demo is the town as the site lists it.
@@ -92,6 +101,7 @@ var Demo = demo.Demo{
 	Server:     server,
 	How:        how,
 	CSS:        css,
+	Script:     script,
 	Events:     Events,
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},

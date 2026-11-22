@@ -33,6 +33,7 @@ func TestExpr(t *testing.T) {
 		{n.Le(1), `$_x.n <= 1`},
 		{Cond(n.Ge(3), Val("KB"), op), `($_x.n >= 3) ? "KB" : $_x.op`},
 		{Max(Val(0), n), `Math.max(0, $_x.n)`},
+		{Grouped(n), `($_x.n).toLocaleString('en')`},
 		{If(on, Invoke("push", n)), `$_x.on && (el.push && el.push($_x.n))`},
 	} {
 		if c.got != c.want {

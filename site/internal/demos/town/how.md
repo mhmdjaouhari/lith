@@ -117,12 +117,14 @@ A replay of the log up to p gives the same town, and `events.StateAt` the same t
 
 ## The slider
 
-Each tab has a position, and like all tab state on this site it is a row of `site_tabs`, written by a command: 0 is now, any other number a position of the log. While you drag, the page sends the slider's value at most once every 50 ms, the length of a tick, and once more where the thumb comes to rest. Each seek carries a number, so a seek that the network delays behind a newer one changes nothing:
+Each tab has a position, and like all tab state on this site it is a row of `site_tabs`, written by a command: 0 is now, any other number a position of the log. While you drag, the page sends the slider's value at most once every 50 ms, the length of a tick, and once more where the thumb comes to rest. The slider's markup calls the page's controller (`town.ts`, checked by tsc against the demo's Go structs) through Datastar's throttle, and each seek carries a number, so a seek that the network delays behind a newer one changes nothing:
 
-```go title=expr.go
-const seek = `const want = +$_town.want;
-$_town.mine++;
-@post('/cmd/town/seek', {payload: {tab: $_tab, at: want >= $_town.head ? 0 : want, seq: $_town.mine}, requestCancellation: 'disabled'})`
+```ts title=town.ts
+const seek = (want: number): void => {
+	s.want = want
+	s.mine++
+	send('town-seek', { at: want >= s.head ? 0 : want, seq: s.mine })
+}
 ```
 
 `Seek` stores the position and, after the commit, moves the tab's stream from the views of the old position to those of the new one, on the writer's goroutine, so the stream follows the positions in the order the writer stored them. The right end of the slider, or beyond, is now.

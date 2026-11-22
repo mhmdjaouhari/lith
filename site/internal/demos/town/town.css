@@ -5,7 +5,7 @@
  * so the town follows the theme. A house's roof takes its builder's hue
  * (--h), roads and bridges share their pieces in asphalt or wood (--_pave).
  * The page's own state reaches a tile through --town-wait, which the
- * page's style element sets by the tile's number (expr.go, waiting). */
+ * controller's sheet sets by the tile's number (town.ts). */
 @scope ([data-demo="town"]) {
 	:scope {
 		--town-grass: light-dark(oklch(80% 0.09 132), oklch(42% 0.06 140));

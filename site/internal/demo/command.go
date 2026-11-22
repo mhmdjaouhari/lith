@@ -22,6 +22,9 @@ var (
 	Tab = ds.NewRef[string]("_tab")
 	// Live is true while the page's stream is open.
 	Live = ds.NewRef[bool]("_live")
+	// Badge is the word the stage's badge says instead of live, such as
+	// past for a stage that shows the past; "" is live again.
+	Badge = ds.NewRef[string]("_badge")
 )
 
 // AckOf is the Ack of typed assignments to the demo's own signals:
