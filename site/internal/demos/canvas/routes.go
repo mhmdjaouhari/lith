@@ -16,20 +16,7 @@ func mount(k *demo.Kit) {
 	// comes first, so a client that makes up sessions makes no buckets.
 	bySession := edge.NewLimiter(pixelRate, pixelBurst)
 	byAddr := edge.NewLimiter(4*pixelRate, 4*pixelBurst)
-	k.Action("paint", demo.Rate{Every: paintEvery, Burst: paintBurst, Separate: true}, func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Tab   string
-			Color int
-			Cells []int
-		}
-		if !demo.Decode(w, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
-			return
-		}
+	PaintAction.Mount(k, func(w http.ResponseWriter, r *http.Request, v demo.Viewer, req PaintReq) {
 		slices.Sort(req.Cells)
 		now := time.Now()
 		cmd := Paint{Viewer: v, Color: req.Color, Cells: slices.Compact(req.Cells), At: now}
@@ -43,19 +30,7 @@ func mount(k *demo.Kit) {
 		cmd.Over = !byAddr.Allow(edge.ClientKey(r), n, now) || !bySession.Allow(v.Session, n, now)
 		k.Act(w, r, v, nil, cmd)
 	})
-	k.Action("pick", demo.Rate{Every: pickEvery, Burst: pickBurst}, func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Tab   string
-			Color int
-		}
-		if !demo.Decode(w, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
-			return
-		}
+	PickAction.Mount(k, func(w http.ResponseWriter, r *http.Request, v demo.Viewer, req PickReq) {
 		k.Act(w, r, v, nil, Pick{Viewer: v, Color: req.Color, At: time.Now()})
 	})
 }

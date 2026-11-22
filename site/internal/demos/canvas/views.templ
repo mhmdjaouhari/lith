@@ -18,18 +18,20 @@ type Page struct {
 
 // Stage is the canvas on its page. The board, the painters and the pulse
 // are the three shared views; the palette and the brush are the tab's own,
-// in signals under $_canvas.
+// in signals under $_canvas. data-canvas mounts its controller
+// (canvas.ts), which reads the palette; the stage tells the server the
+// tab's brush as it starts, which adds the tab to the painters.
 templ Stage(p Page) {
-	<div class="cv" data-signals={ signals(p.Color) } data-init={ start }>
+	<div class="cv" data-signals={ Signals{Color: p.Color}.Decl() } data-canvas data-init={ pick }>
 		@you(p.Me)
-		<span class="cv__probe" aria-hidden="true"></span>
+		<span class={ ClassProbe } aria-hidden="true"></span>
 		<div class="cv__canvas">
 			<p class="cv__caption">One canvas for all · 64 × 64</p>
 			<div class="cv__frame">
 				@Board(p.Cells)
 			</div>
 			@Outcome(TabState{})
-			<p class="outcome is-problem cv__problem" role="alert" data-text="$_canvas.problem"></p>
+			<p class="outcome is-problem cv__problem" role="alert" data-text={ S.Problem }></p>
 		</div>
 		<div class="cv__side">
 			@palette(p.Color)
@@ -57,11 +59,11 @@ templ Board(cells string) {
 		id="canvas-board"
 		size={ strconv.Itoa(Size) }
 		cells={ cells }
-		data-on:sb-paint={ paint }
+		{ paint... }
 		data-on:datastar-fetch={ refused }
-		data-on:pointerdown="$_canvas.problem = ''"
-		data-attr:palette="$_canvas.palette"
-		data-attr:color="$_canvas.color"
+		data-on:pointerdown={ S.Problem.Assign("") }
+		data-attr:palette={ paletteAttr }
+		data-attr:color={ S.Color }
 		data-preserve-attr="palette color"
 	></sb-pixel-board>
 }
@@ -70,7 +72,7 @@ templ Board(cells string) {
 // site's. A change is the tab's own (its brush) and goes to the server,
 // which shows it in the list of painters.
 templ palette(color int) {
-	<fieldset class="cv__palette" data-on:input={ choose } data-on:change__debounce.300ms={ pick } data-on:datastar-fetch={ pickFailed }>
+	<fieldset class="cv__palette" { pickLater... } data-on:datastar-fetch={ pickFailed }>
 		<legend>Brush</legend>
 		<div class="cv__swatches">
 			for _, i := range swatchOrder {
@@ -82,6 +84,7 @@ templ palette(color int) {
 						if i == color {
 							checked
 						}
+						data-on:input={ choose(i) }
 					/>
 					<span class="tip__bubble">{ colorNames[i] }</span>
 				</label>

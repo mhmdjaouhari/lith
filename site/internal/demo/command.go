@@ -97,7 +97,15 @@ func (c Command[Req]) post(payload string, o Post) ds.Expr {
 // typed, and the tab id. Spread it on the element that listens:
 // <div { cmd.On(post)... }>.
 func (c Command[Req]) On(o Post) templ.Attributes {
-	return templ.Attributes{"data-on:" + c.Event(): string(c.post("{...evt.detail, tab: "+Tab.String()+"}", o))}
+	return c.OnEvent(c.Event(), o)
+}
+
+// OnEvent is On for the event a component dispatches, such as
+// sb-pixel-board's sb-paint, whose detail carries Req's keys but the
+// tab. tsc does not see a component's detail: the payload's test posts
+// what the component sends.
+func (c Command[Req]) OnEvent(event string, o Post) templ.Attributes {
+	return templ.Attributes{"data-on:" + event: string(c.post("{...evt.detail, tab: "+Tab.String()+"}", o))}
 }
 
 // PostTab is the expression that posts the action with the tab id

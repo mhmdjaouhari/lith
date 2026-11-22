@@ -13,6 +13,8 @@ import (
 
 	"github.com/zweiundeins/lith/edge"
 	"github.com/zweiundeins/lith/writer"
+
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // Ack is what a notice patches into the demo's signals besides its
@@ -213,6 +215,15 @@ func PendingOf(s PendingSignalsRefs) Pending {
 		Failed:   "That did not work. Try again.",
 		Lost:     "That did not go through. Try again.",
 	}
+}
+
+// RetriesFailed is the data-on:datastar-fetch that runs step when a
+// request of the element gave up after its retries: the connection is
+// down, which only the page knows, so it says so in its own words. For a
+// demo without a pending op (the canvas); one with an op ends it through
+// Pending.Fetched.
+func RetriesFailed(step ds.Value) ds.Expr {
+	return ds.If(ds.Expr("evt.detail.el === el && evt.detail.type === 'retries-failed'"), step)
 }
 
 // Within is p for an element whose requests go out from the buttons in it

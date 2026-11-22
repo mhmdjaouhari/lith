@@ -70,20 +70,7 @@ The kit limits the requests of every action; `Separate` keeps a painter's stroke
 ```go title=routes.go
 	bySession := edge.NewLimiter(pixelRate, pixelBurst)
 	byAddr := edge.NewLimiter(4*pixelRate, 4*pixelBurst)
-	k.Action("paint", demo.Rate{Every: paintEvery, Burst: paintBurst, Separate: true}, func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Tab   string
-			Color int
-			Cells []int
-		}
-		if !demo.Decode(w, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
-			return
-		}
+	PaintAction.Mount(k, func(w http.ResponseWriter, r *http.Request, v demo.Viewer, req PaintReq) {
 		slices.Sort(req.Cells)
 		now := time.Now()
 		cmd := Paint{Viewer: v, Color: req.Color, Cells: slices.Compact(req.Cells), At: now}
@@ -145,10 +132,10 @@ Every two seconds it renders again for the counts of the last minute; a frame eq
 
 ## The page
 
-`sb-pixel-board` batches a stroke into an `sb-paint` event every 80 ms. Datastar would cancel a request still under way when the next one goes to the same URL, so the post turns that off: on a slow connection a stroke would lose pixels otherwise.
+`sb-pixel-board` batches a stroke into an `sb-paint` event every 80 ms, its colour and its cells, the keys of the Go struct `PaintReq` but the tab. Datastar would cancel a request still under way when the next one goes to the same URL, so the post turns that off: on a slow connection a stroke would lose pixels otherwise.
 
 ```go title=expr.go
-const paint = `@post('/cmd/canvas/paint', {payload: {tab: $_tab, color: evt.detail.color, cells: evt.detail.cells}, requestCancellation: 'disabled'})`
+var paint = PaintAction.OnEvent("sb-paint", demo.Post{RequestCancellation: "disabled"})
 ```
 
 The pixels you paint show faded until the board's frame brings them back. If no frame confirms them within three seconds, because the server refused the request, the component takes them back.
@@ -176,25 +163,20 @@ The component paints with sixteen hex colours, and the site's colours are tokens
 	}
 ```
 
-The page turns them into hex: a hidden probe takes each token as its colour, and a 1 by 1 canvas turns whatever the browser computed into sRGB. It reads them again when the theme changes, and the board stays hidden until it has them.
+The page's controller (`canvas.ts`, checked by tsc against the demo's Go structs) turns them into hex: a hidden probe takes each token as its colour, and a 1 by 1 canvas turns whatever the browser computed into sRGB. It reads them again when the theme changes, and the board stays hidden until it has them.
 
-```go title=expr.go
-const start = `
-const probe = el.querySelector('.cv__probe');
-const pen = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
-const read = () => {
-	$_canvas.palette = JSON.stringify(Array.from({length: 16}, (_, i) => {
-		probe.style.color = 'var(--canvas-c' + i + ')';
-		pen.fillStyle = getComputedStyle(probe).color;
-		pen.fillRect(0, 0, 1, 1);
-		const [r, g, b] = pen.getImageData(0, 0, 1, 1).data;
-		return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
-	}));
-};
-read();
-new MutationObserver(read).observe(document.documentElement, {attributeFilter: ['data-lith-theme']});
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', read);
-@post('/cmd/canvas/pick', {payload: {tab: $_tab, color: $_canvas.color}})`
+```ts title=canvas.ts
+const read = (): void => {
+	s.palette = JSON.stringify(
+		Array.from({ length: Colours }, (_, i) => {
+			probe.style.color = `var(${PropColour}${i})`
+			pen.fillStyle = getComputedStyle(probe).color
+			pen.fillRect(0, 0, 1, 1)
+			const [r = 0, g = 0, b = 0] = pen.getImageData(0, 0, 1, 1).data
+			return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)
+		}),
+	)
+}
 ```
 
 ## A day per pixel

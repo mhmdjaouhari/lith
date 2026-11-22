@@ -289,7 +289,7 @@ func TestViews(t *testing.T) {
 		}
 		doc := html.String()
 		for _, want := range []string{
-			`{_canvas: {color: 14, palette: false`,          // the brush ada used last
+			`{&#34;_canvas&#34;:{&#34;color&#34;:14,`,       // the brush ada used last
 			`data-tag="` + Tag(ada.Tab) + `" data-c="14"`,   // ada among the painters
 			`.cv__painter[data-tag="` + Tag(ada.Tab) + `"]`, // and marked as the tab's own
 			`value="14" checked`,

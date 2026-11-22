@@ -57,6 +57,8 @@ var (
 	css string
 	//go:embed migrations
 	migrationFiles embed.FS
+	//go:embed canvas.ts ds.gen.ts
+	script embed.FS
 )
 
 // Demo is the canvas as the site lists it.
@@ -69,6 +71,7 @@ var Demo = demo.Demo{
 	Server:     server,
 	How:        how,
 	CSS:        css,
+	Script:     script,
 	Components: []string{"pixel-board"},
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: pageViews},
