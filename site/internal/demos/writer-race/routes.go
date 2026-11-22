@@ -26,23 +26,14 @@ func mount(k *demo.Kit) {
 	if err := k.W.Send(recovered(time.Now(), r.wake)); err != nil {
 		k.Log.Warn("writer race: recover", "err", err)
 	}
-	k.Action("start", demo.Rate{Every: startEvery, Burst: startBurst}, func(w http.ResponseWriter, req *http.Request) {
-		var body struct {
-			Tab, Op   string
-			Producers int
-			Sync      string
-		}
-		if !demo.Decode(w, req, &body) {
-			return
-		}
-		v, ok := demo.Who(req, body.Tab)
-		if !ok || !demo.ValidID(body.Op) {
+	StartAction.Mount(k, func(w http.ResponseWriter, req *http.Request, v demo.Viewer, body StartReq) {
+		if !demo.ValidID(body.Op) {
 			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
 			return
 		}
 		cmd := Start{Viewer: v, Op: body.Op, Settings: Settings{body.Producers, body.Sync}, At: time.Now(), Client: edge.ClientKey(req), Joined: r.wake}
 		// A retried request (a flaky network) starts one race.
-		k.Act(w, req, v, demo.Ack{"ack": body.Op}, writer.Once(Slug+":"+v.Session+":"+body.Op, cmd))
+		k.Act(w, req, v, k.AckOf(S.Ack.Set(body.Op)), writer.Once(Slug+":"+v.Session+":"+body.Op, cmd))
 	})
 }
 

@@ -81,7 +81,7 @@ func TestWriterRaceStream(t *testing.T) {
 	get(t, bob, base+"/demos/writer-race")
 	events := listen(t, ada, base+"/demos/writer-race/stream?tab=tab1")
 	next(t, events, `id="writer-race-track"`)
-	next(t, events, `"_writerRace":{"ack":"","mine":0,"active":false,"synced":true}`)
+	next(t, events, `"_writerRace":{"ack":"","active":false,"mine":0,"synced":true}`)
 
 	if code := post(t, ada, base+"/cmd/writer-race/start", `{"tab":"tab1","op":"op1","producers":50,"sync":"NORMAL"}`); code != http.StatusNoContent {
 		t.Fatalf("start: %d", code)
@@ -89,7 +89,7 @@ func TestWriterRaceStream(t *testing.T) {
 	// The line and the tab's own view change in the same tick, and reach
 	// the stream in the order it watches them.
 	next(t, events, `id="writer-race-wait-1"`)
-	next(t, events, `"ack":"op1","mine":1,"active":true`)
+	next(t, events, `"ack":"op1","active":true,"mine":1`)
 	listen(t, bob, base+"/demos/writer-race/stream?tab=tab2")
 	if code := post(t, bob, base+"/cmd/writer-race/start", `{"tab":"tab2","op":"op1","producers":1,"sync":"FULL"}`); code != http.StatusNoContent {
 		t.Fatalf("bob's start: %d", code)
@@ -103,7 +103,7 @@ func TestWriterRaceStream(t *testing.T) {
 		next(t, events, `id="writer-race-track" class="wr-track" data-state="running"`)
 	}
 	writerRaceNext(t, events, `id="writer-race-result-1"`)
-	next(t, events, `"ack":"op1","mine":1,"active":false`)
+	next(t, events, `"ack":"op1","active":false,"mine":1`)
 
 	// The same session again while bob's race waits or runs: refused.
 	bobs := listen(t, bob, base+"/demos/writer-race/stream?tab=tab3")

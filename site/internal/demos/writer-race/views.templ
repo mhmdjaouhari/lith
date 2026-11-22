@@ -4,21 +4,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zweiundeins/lith/site/internal/views"
+	"github.com/zweiundeins/lith/site/internal/demo"
 	"github.com/zweiundeins/lith/site/internal/format"
+	"github.com/zweiundeins/lith/site/internal/views"
 )
 
 // Stage is the demo on its page: the controls and the tab's outcome, the
 // track, the line and the last races.
 templ Stage(t track, waiting []Race, list []Race, now time.Time) {
-	<div class="wr" data-signals={ signals }>
+	<div class="wr" data-signals={ NewSignals().Decl() }>
 		<form class="wr-controls" data-on:submit__prevent={ start } data-on:datastar-fetch={ fetched } data-effect={ settle } data-on-signal-patch={ op.LostExpr() } data-on-signal-patch-filter={ op.LostFilter() }>
 			<fieldset class="wr-choice wr-choice--producers">
 				<legend>Producers</legend>
 				<div class="wr-choice__options">
 					for _, p := range Producers {
 						<label>
-							<input type="radio" name="writer-race-producers" value={ strconv.Itoa(p) } data-bind="_writerRace.producers" checked?={ p == 200 }/>
+							<input type="radio" name="writer-race-producers" value={ strconv.Itoa(p) } data-bind={ S.Producers.Path() } checked?={ p == 200 }/>
 							<span>{ strconv.Itoa(p) }</span>
 						</label>
 					}
@@ -29,7 +30,7 @@ templ Stage(t track, waiting []Race, list []Race, now time.Time) {
 				<div class="wr-choice__options">
 					for _, s := range Syncs {
 						<label>
-							<input type="radio" name="writer-race-sync" value={ s } data-bind="_writerRace.sync" checked?={ s == "NORMAL" }/>
+							<input type="radio" name="writer-race-sync" value={ s } data-bind={ S.Sync.Path() } checked?={ s == "NORMAL" }/>
 							<span>{ s }</span>
 						</label>
 					}
@@ -39,12 +40,12 @@ templ Stage(t track, waiting []Race, list []Race, now time.Time) {
 				Each producer sends a transfer and waits for its commit before it sends the next, for three seconds.
 				<b>NORMAL</b> syncs SQLite's log to the disk at checkpoints, <b>FULL</b> at every commit.
 			</p>
-			<button class="btn btn--primary wr-controls__go" type="submit" data-attr:aria-busy={ busy } data-attr:disabled="$_writerRace.active">
+			<button class="btn btn--primary wr-controls__go" type="submit" data-attr:aria-busy={ busy } data-attr:disabled={ S.Active }>
 				Start a race
 			</button>
 			<div class="wr-controls__said">
 				@Outcome(outcome{})
-				<p class="outcome is-problem" role="alert" data-show="$_writerRace.problem" data-text="$_writerRace.problem"></p>
+				<p class="outcome is-problem" role="alert" data-show={ S.Problem } data-text={ S.Problem }></p>
 			</div>
 		</form>
 		@Track(t)
@@ -281,8 +282,8 @@ templ Results(list []Race, now time.Time) {
 // track, or the last one, kept current by the landing page's stream, and
 // a button that starts a race of 200 producers with NORMAL.
 templ Embed(t track) {
-	<div class="wr-embed" data-signals={ signals }>
-		<p class="wr-embed__head" data-class:is-live="$_live"><span class="wr-embed__dot" aria-hidden="true"></span>The writer race, live</p>
+	<div class="wr-embed" data-signals={ NewSignals().Decl() }>
+		<p class="wr-embed__head" data-class:is-live={ demo.Live }><span class="wr-embed__dot" aria-hidden="true"></span>The writer race, live</p>
 		@embedLive(t)
 		<div class="wr-embed__go">
 			<button
@@ -294,7 +295,7 @@ templ Embed(t track) {
 				data-on-signal-patch={ op.LostExpr() }
 				data-on-signal-patch-filter={ op.LostFilter() }
 				data-attr:aria-busy={ busy }
-				data-attr:disabled="$_writerRace.active"
+				data-attr:disabled={ S.Active }
 			>
 				Race 200 producers
 			</button>
@@ -304,7 +305,7 @@ templ Embed(t track) {
 			</a>
 		</div>
 		@EmbedOutcome(outcome{})
-		<p class="outcome is-problem" role="alert" data-show="$_writerRace.problem" data-text="$_writerRace.problem"></p>
+		<p class="outcome is-problem" role="alert" data-show={ S.Problem } data-text={ S.Problem }></p>
 	</div>
 }
 

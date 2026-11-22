@@ -11,6 +11,7 @@ import (
 	"github.com/zweiundeins/lith/sse"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // renderPage draws the demo into the GET document: the controls, the
@@ -90,17 +91,6 @@ func resultsView() live.View {
 	}
 }
 
-// ack tells the page which op the tab's outcome belongs to, which race is
-// the tab's, and whether it still waits or runs.
-type ack struct {
-	WriterRace struct {
-		Ack    string `json:"ack"`
-		Mine   int64  `json:"mine"`
-		Active bool   `json:"active"`
-		Synced bool   `json:"synced"` // the stream the page opened brought the tab's row (demo.Pending)
-	} `json:"_writerRace"`
-}
-
 // tabView is the tab's own region, from its row in site_tabs and its
 // race's row: it listens to the line and the track as well, since its
 // race moves up the line and onto the track with the others.
@@ -122,10 +112,12 @@ func ownView(v demo.Viewer, c func(outcome) templ.Component) live.View {
 			if err != nil {
 				return nil, err
 			}
-			var a ack
-			a.WriterRace.Ack, a.WriterRace.Mine = o.State.Op, o.Race.ID
-			a.WriterRace.Active, a.WriterRace.Synced = o.Race.ID != 0 && !o.Race.Over(), true
-			signals, err := demo.Signals(a)
+			signals, err := demo.Signals(ds.Tree(
+				S.Ack.Set(o.State.Op),
+				S.Mine.Set(o.Race.ID),
+				S.Active.Set(o.Race.ID != 0 && !o.Race.Over()),
+				S.Synced.Set(true), // the stream the page opened brought the tab's row (demo.Pending)
+			))
 			if err != nil {
 				return nil, err
 			}
