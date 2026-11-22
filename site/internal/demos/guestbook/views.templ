@@ -79,7 +79,7 @@ func entryID(e Entry) string { return "guestbook-entry-" + strconv.FormatInt(e.I
 // kept current by the landing page's stream.
 templ Embed(list []Entry, total int, now time.Time) {
 	<div class="gb-embed">
-		<p class="gb-embed__head" data-class:is-live={ demo.Live.String() }><span class="gb-embed__dot" aria-hidden="true"></span>The guestbook, live</p>
+		<p class="gb-embed__head" data-class:is-live={ demo.Live }><span class="gb-embed__dot" aria-hidden="true"></span>The guestbook, live</p>
 		@latestList(list, total, now)
 		<a class="btn btn--sm" href="/demos/guestbook">
 			Sign it

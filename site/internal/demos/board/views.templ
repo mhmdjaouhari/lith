@@ -47,11 +47,11 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		</div>
 		<div class="bd__foot">
 			@Outcome(TabState{})
-			<p class="outcome is-problem" role="alert" style="display: none" data-show={ S.Problem.String() } data-text={ S.Problem.String() }></p>
+			<p class="outcome is-problem" role="alert" style="display: none" data-show={ S.Problem } data-text={ S.Problem }></p>
 			<p id="board-help" class="bd__help">
 				Drag a card to another place, or focus it and press <kbd>Space</kbd>: the arrow keys choose a place, <kbd>Space</kbd> drops it there, <kbd>Esc</kbd> puts it back. On a touch screen, drag a card by its grip.
 			</p>
-			<p class="visually-hidden" aria-live="assertive" data-text={ S.Say.String() }></p>
+			<p class="visually-hidden" aria-live="assertive" data-text={ S.Say }></p>
 		</div>
 	</div>
 }
@@ -206,7 +206,7 @@ templ Outcome(s TabState) {
 // and who is on it, kept current by the landing page's stream.
 templ Embed(b Board, n Numbers, people []Person, now time.Time) {
 	<div class="bd-embed">
-		<p class="bd-embed__head" data-class:is-live={ demo.Live.String() }><span class="bd-embed__dot" aria-hidden="true"></span>The shared board, live</p>
+		<p class="bd-embed__head" data-class:is-live={ demo.Live }><span class="bd-embed__dot" aria-hidden="true"></span>The shared board, live</p>
 		<div class="bd-embed__body">
 			@Mini(b, now)
 			<div class="bd-embed__side">
