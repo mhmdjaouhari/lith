@@ -25,7 +25,7 @@ const (
 	ClassTile  = "cb-tile"   // a tile
 	ClassBoxes = "cb-boxes"  // a tile's boxes, the checkboxes and nothing else
 
-	PropPitch  = "--cb-pitch"  // px from box to box, from the controller's measure
+	PropPitch  = "--cb-pitch"  // px from box to box, a number, from the controller's measure
 	PropChrome = "--cb-chrome" // a tile's head and the space under it
 )
 

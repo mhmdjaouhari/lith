@@ -175,7 +175,7 @@ func TestExpressions(t *testing.T) {
 		setPosts["data-on:checkboxes-set"].(string):       `@post("/cmd/checkboxes/set", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`,
 		windowPosts["data-on:checkboxes-window"].(string): `@post("/cmd/checkboxes/window", {payload: {...evt.detail, tab: $_tab}})`,
 		greetPosts["data-on:checkboxes-window"].(string):  `@post("/cmd/checkboxes/window", {payload: {...evt.detail, tab: $_tab}, "retry":"error","retryMaxCount":5})`,
-		pitch: `$_checkboxes.pitch + 'px'`,
+		pitch["data-style:--cb-pitch"].(string):           `$_checkboxes.pitch`,
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)

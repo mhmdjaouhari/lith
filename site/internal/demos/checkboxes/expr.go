@@ -1,6 +1,10 @@
 package checkboxes
 
-import "github.com/zweiundeins/lith/site/internal/demo"
+import (
+	"github.com/a-h/templ"
+
+	"github.com/zweiundeins/lith/site/internal/demo"
+)
 
 // The Datastar expressions of the demo, built from the typed refs of its
 // signals (S) and its typed commands: none names a signal or a route by
@@ -33,5 +37,6 @@ var windowPosts = WindowAction.On(demo.Post{})
 // is tried again.
 var greetPosts = WindowAction.On(demo.Post{Retry: "error", RetryMaxCount: 5})
 
-// pitch is the distance from box to box that the tiles take (--cb-pitch).
-var pitch = S.Pitch.String() + " + 'px'"
+// pitch is the distance from box to box that the tiles take: the signal,
+// a number of px, as --cb-pitch, which checkboxes.css multiplies by 1px.
+var pitch = templ.Attributes{"data-style:" + PropPitch: S.Pitch.String()}
