@@ -16,8 +16,8 @@
 //	}
 //
 // The declaration is the struct's JSON (Decl), a server patch is a list
-// of typed assignments (Set), and an expression is built from refs and
-// Go values (Ref.Eq, Lit), never typed out by hand.
+// of typed assignments (Set), and an expression (Expr) is built from refs
+// and Go values (Ref.Eq, If, Call), never typed out by hand.
 package ds
 
 import (
@@ -26,8 +26,10 @@ import (
 	"strings"
 )
 
-// Ref is a signal at a path, such as "_board.op", whose value is a T.
-type Ref[T any] struct{ path string }
+// Ref is a signal at a path, such as "_board.op", whose value is a T. It
+// is the signal as an expression, "$_board.op", so a template takes it as
+// an attribute's value: data-text={ S.Problem }.
+type Ref[T any] string
 
 // NewRef returns the ref of the signal at path. Generated code calls it;
 // a demo uses the refs dsgen writes.
@@ -35,27 +37,40 @@ func NewRef[T any](path string) Ref[T] {
 	if path == "" || strings.ContainsAny(path, " $'\"") {
 		panic(fmt.Sprintf("ds: bad signal path %q", path))
 	}
-	return Ref[T]{path}
+	return Ref[T]("$" + path)
 }
 
-// String is the signal in an expression: "$_board.op".
-func (r Ref[T]) String() string { return "$" + r.path }
+func (r Ref[T]) js() string { return string(r) }
 
-// Path is the signal's path without the $: "_board.op", as a signal
-// patch filter and Datastar's getPath name it.
-func (r Ref[T]) Path() string { return r.path }
+// String is the signal in an expression: "$_board.op".
+func (r Ref[T]) String() string { return string(r) }
+
+// Path is the signal's path without the $: "_board.op", as data-bind, a
+// signal patch filter and Datastar's getPath name it.
+func (r Ref[T]) Path() string { return strings.TrimPrefix(string(r), "$") }
 
 // Set is the assignment of v to the signal, for a patch (Patch).
-func (r Ref[T]) Set(v T) Assign { return Assign{path: r.path, value: v} }
+func (r Ref[T]) Set(v T) Assign { return Assign{path: r.Path(), value: v} }
 
-// Assign is the JS statement that sets the signal to v.
-func (r Ref[T]) Assign(v T) string { return r.String() + " = " + Lit(v) }
+// Assign sets the signal to v; To sets it to what e yields.
+func (r Ref[T]) Assign(v T) Expr { return r.To(Val(v)) }
+func (r Ref[T]) To(e Value) Expr { return Expr(string(r) + " = " + e.js()) }
 
-// Eq is the expression that the signal equals v.
-func (r Ref[T]) Eq(v T) string { return r.String() + " === " + Lit(v) }
+// Inc adds one to the signal, a number.
+func (r Ref[T]) Inc() Expr { return Expr(string(r) + " = " + string(r) + " + 1") }
 
-// Ne is the expression that the signal differs from v.
-func (r Ref[T]) Ne(v T) string { return r.String() + " !== " + Lit(v) }
+// Eq, Ne, Lt and Ge compare the signal with v: ===, !==, < and >=.
+func (r Ref[T]) Eq(v T) Expr { return r.cmp("===", Val(v)) }
+func (r Ref[T]) Ne(v T) Expr { return r.cmp("!==", Val(v)) }
+func (r Ref[T]) Lt(v T) Expr { return r.cmp("<", Val(v)) }
+func (r Ref[T]) Ge(v T) Expr { return r.cmp(">=", Val(v)) }
+
+// Is is true while the signal equals o, AtLeast while it is o or after
+// it: an ack and the op it answers, whose ids grow with time.
+func (r Ref[T]) Is(o Ref[T]) Expr      { return r.cmp("===", o) }
+func (r Ref[T]) AtLeast(o Ref[T]) Expr { return r.cmp(">=", o) }
+
+func (r Ref[T]) cmp(op string, v Value) Expr { return Expr(string(r) + " " + op + " " + operand(v)) }
 
 // Lit is v as a JavaScript literal. JSON is one, quotes and line breaks
 // escaped, so copy with an apostrophe can never end an expression early.

@@ -206,6 +206,15 @@ const flush = (): void => {
 }
 ```
 
+The markup says which element answers which event, and the controller how. The field's events call the controller's actions, `@lifeBegin()` and the like, through expressions built in Go: the draw tool starts a stroke where the pointer goes down, any other tool drops its pattern on a click. The actions' names are Go constants (`ActBegin` in `dom.go`), so tsc fails when `life.ts` lacks one, and the page's test when the markup calls one nobody implements. What takes a line stays in the markup: a swatch posts its colour and the reset button the reset, and the stage ends what was pending when the tab's view confirms the newest op.
+
+```go title=expr.go
+var (
+	begin   = ds.If(drawing, ds.Call(ActBegin))
+	dropped = ds.If(ds.Not(drawing), ds.Call(ActDrop))
+)
+```
+
 ## Measured
 
 On a development machine, an Intel i5-13500, on 13 October 2026, with the site running as in production (`GOMEMLIMIT=192MiB`, on four cores) and the streams opened by `TestLoad` in another process, 20 to 30 seconds a run:

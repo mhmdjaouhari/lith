@@ -161,20 +161,20 @@ func TestPayload(t *testing.T) {
 
 // TestExpressions pins what the typed builders write for the page.
 func TestExpressions(t *testing.T) {
-	for got, want := range map[string]string{
-		posts["data-on:life-draw"].(string):   `@post("/cmd/life/draw", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`,
-		posts["data-on:life-colour"].(string): `@post("/cmd/life/colour", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`,
-		toolPressed("pulsar"):                 `$_life.tool === "pulsar" ? 'true' : 'false'`,
-		turn:                                  `$_life.turn = $_life.turn + 1`,
-		picking(2):                            `$_life.pick === 2 && $_life.colour !== 2 ? 'true' : false`,
-		cursor:                                `'--x:' + $_life.x + ';--y:' + $_life.y + ';--turn:' + $_life.turn`,
-		me:                                    `'--me: var(--life-' + ' abcdefgh'[$_life.colour] + ')'`,
+	for _, c := range []struct{ got, want string }{
+		{posts["data-on:life-draw"].(string), `@post("/cmd/life/draw", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`},
+		{string(toolPressed("pulsar")), `($_life.tool === "pulsar") ? 'true' : 'false'`},
+		{string(begin), `($_life.tool === "draw") && @lifeBegin()`},
+		{string(picking(2)), `(($_life.pick === 2) && ($_life.colour !== 2)) ? 'true' : false`},
+		{string(pick(2)), `$_life.pick = 2, $_life.problem = "", @post("/cmd/life/colour", {payload: {"colour": $_life.pick, tab: $_tab}, "requestCancellation":"disabled"})`},
+		{string(reset), `!$_life.resetting && ($_life.problem = "", $_life.op = @orderedOpId(), $_life.resetting = true, @post("/cmd/life/reset", {payload: {"op": $_life.op, tab: $_tab}, "requestCancellation":"disabled"}))`},
+		{string(settle), `(($_life.op !== "") && ($_life.ack >= $_life.op)) && ($_life.op = "", $_life.pend = "", $_life.ptool = "", $_life.resetting = false)`},
 	} {
-		if got != want {
-			t.Errorf("got  %s\nwant %s", got, want)
+		if c.got != c.want {
+			t.Errorf("got  %s\nwant %s", c.got, c.want)
 		}
 	}
-	if len(posts) != 4 {
-		t.Errorf("the stage posts %d actions, want 4", len(posts))
+	if len(posts) != 2 {
+		t.Errorf("the stage posts %d actions, want 2", len(posts))
 	}
 }

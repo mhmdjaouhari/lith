@@ -15,22 +15,22 @@ import (
 // ack (lost), never on a clock.
 var op = demo.PendingOf(S.PendingSignalsRefs)
 
+// pending is true from the click until the stream brings the outcome.
+var pending = S.Op.Ne("")
+
 // sign sends the form with a new op id unless one is pending. The payload
 // is SignReq's, read from the signals: PostSignals panics, as the package
 // loads, at a key it lacks or misspells. The tab's stream brings the op's
 // outcome back as ack.
-var sign = S.Op.Eq("") + " && " + ds.Trimmed(S.Name.String()) + " && " + ds.Trimmed(S.Message.String()) + ` && (
-	` + S.Problem.Assign("") + `,
-	` + S.Op.String() + ` = Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-	` + SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},
-	demo.From("op", S.Op),
-	demo.From("name", S.Name),
-	demo.From("message", S.Message),
-) + `
-)`
-
-// pending is true from the click until the stream brings the outcome.
-var pending = S.Op.Ne("")
+var sign = ds.If(ds.And(S.Op.Eq(""), ds.Trimmed(S.Name), ds.Trimmed(S.Message)),
+	S.Problem.Assign(""),
+	S.Op.To(ds.OpID),
+	SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},
+		demo.From("op", S.Op),
+		demo.From("name", S.Name),
+		demo.From("message", S.Message),
+	),
+)
 
 // busy is pending for aria-busy: data-attr writes true as an empty value,
 // which aria-busy reads as false.
@@ -38,10 +38,10 @@ var busy = ds.AriaBusy(pending)
 
 // settle ends the pending state when the outcome arrives, and empties the
 // message once it was accepted.
-var settle = pending + " && " + S.Ack.String() + " === " + S.Op.String() + " && (" + S.Accepted.String() + " && (" + S.Message.Assign("") + "), " + S.Op.Assign("") + ")"
+var settle = ds.If(ds.And(pending, S.Ack.Is(S.Op)),
+	ds.If(S.Accepted, S.Message.Assign("")),
+	S.Op.Assign(""),
+)
 
 // fetched follows the form's requests (demo.Pending.Fetched).
 var fetched = op.Fetched()
-
-// The problem's line.
-var problem = S.Problem.String()

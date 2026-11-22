@@ -217,14 +217,15 @@ func (s Schema) Has(path string) error {
 // and the id references of its id-reference attributes.
 type markup struct {
 	attrs, classes, ids map[string]bool
-	refs                []string // "attr=id"
+	refs                []string        // "attr=id"
+	calls               map[string]bool // the actions data- attributes call: post in @post(...)
 }
 
 // idRefs are the attributes whose value names ids on the page.
 var idRefs = map[string]bool{"aria-labelledby": true, "aria-describedby": true, "aria-controls": true, "aria-owns": true, "aria-activedescendant": true, "aria-errormessage": true, "for": true, "popovertarget": true, "commandfor": true, "list": true, "form": true}
 
 func parse(page string) (markup, error) {
-	m := markup{attrs: map[string]bool{}, classes: map[string]bool{}, ids: map[string]bool{}}
+	m := markup{attrs: map[string]bool{}, classes: map[string]bool{}, ids: map[string]bool{}, calls: map[string]bool{}}
 	nodes, err := html.ParseFragment(strings.NewReader(page), &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body})
 	if err != nil {
 		return m, err
@@ -233,6 +234,11 @@ func parse(page string) (markup, error) {
 	walk = func(n *html.Node) {
 		for _, a := range n.Attr {
 			m.attrs[a.Key] = true
+			if strings.HasPrefix(a.Key, "data-") {
+				for _, c := range actionRef.FindAllStringSubmatch(a.Val, -1) {
+					m.calls[c[1]] = true
+				}
+			}
 			switch {
 			case a.Key == "class":
 				for _, c := range strings.Fields(a.Val) {
@@ -277,10 +283,14 @@ func CheckRefs(page string) []error {
 // the page or its stylesheet lacks, by the name's kind: an Attr… is an
 // attribute of an element of page, a Class… a class of one, an Id… the id
 // of one (an id prefix when it ends in -, which some id begins with), a
-// Prop… a custom property and an Anim… an animation that css names. The
-// controller reads the page by these names and the stream finds its
-// regions by their ids; one the templates or the CSS dropped is a drag
-// that finds nothing or a region no frame reaches.
+// Prop… a custom property, an Anim… an animation that css names, and an
+// Act… an action that a data- attribute calls (@lifeDrop()), which the
+// controller implements (lith-ui's actions). The controller reads the page
+// by these names and the stream finds its regions by their ids; one the
+// templates or the CSS dropped is a drag that finds nothing or a region no
+// frame reaches. It reports too an action the page calls that is neither
+// Datastar's, lith-ui's (Actions) nor an Act…: a typo, which Datastar
+// would only find on the click.
 func CheckDOM(page, css string, names map[string]string) []error {
 	m, err := parse(page)
 	if err != nil {
@@ -311,15 +321,41 @@ func CheckDOM(page, css string, names map[string]string) []error {
 			ok = regexp.MustCompile(regexp.QuoteMeta(v) + `\b`).MatchString(css)
 		case strings.HasPrefix(name, "Anim"):
 			ok = regexp.MustCompile(`@keyframes\s+` + regexp.QuoteMeta(v) + `\b`).MatchString(css)
+		case strings.HasPrefix(name, "Act"):
+			ok = m.calls[v]
 		default:
-			errs = append(errs, fmt.Errorf("%s: name a //ds:dom constant Attr…, Class…, Id…, Prop… or Anim…", name))
+			errs = append(errs, fmt.Errorf("%s: name a //ds:dom constant Attr…, Class…, Id…, Prop…, Anim… or Act…", name))
 			continue
 		}
 		if !ok {
 			errs = append(errs, fmt.Errorf("%s = %q is not on the page or in its CSS", name, v))
 		}
 	}
+	declared := map[string]bool{}
+	for name, v := range names {
+		if strings.HasPrefix(name, "Act") {
+			declared[v] = true
+		}
+	}
+	calls := make([]string, 0, len(m.calls))
+	for c := range m.calls {
+		calls = append(calls, c)
+	}
+	sort.Strings(calls)
+	for _, c := range calls {
+		if !Actions[c] && !declared[c] {
+			errs = append(errs, fmt.Errorf("@%s(): no action of Datastar's, lith-ui's or an Act… of //ds:dom", c))
+		}
+	}
 	return errs
+}
+
+// Actions are the actions every page has: Datastar's, and those lith-ui
+// registers (orderedOpId).
+var Actions = map[string]bool{
+	"get": true, "post": true, "put": true, "patch": true, "delete": true,
+	"peek": true, "setAll": true, "toggleAll": true,
+	"orderedOpId": true,
 }
 
 var (
@@ -455,6 +491,10 @@ var inline = regexp.MustCompile(`\bdata-([a-z][a-z0-9-]*)(?::[a-z0-9-]+)?(?:__[a
 // inline: an expression is built in Go from typed refs, so the compiler
 // sees every signal it reads.
 func Lint(dir string) ([]error, error) {
+	return lint(dir, func(string) bool { return true }, "build the expression in Go from ds refs, as { expr }")
+}
+
+func lint(dir string, bad func(expr string) bool, fix string) ([]error, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "*.templ"))
 	if err != nil {
 		return nil, err
@@ -467,8 +507,8 @@ func Lint(dir string) ([]error, error) {
 		}
 		for i, line := range bytes.Split(src, []byte("\n")) {
 			for _, m := range inline.FindAllSubmatch(line, -1) {
-				if _, ok := Plugins[string(m[1])]; ok {
-					errs = append(errs, fmt.Errorf("%s:%d: data-%s=%q: build the expression in Go from ds refs, as { expr }", filepath.Base(f), i+1, m[1], m[2]))
+				if _, ok := Plugins[string(m[1])]; ok && bad(string(m[2])) {
+					errs = append(errs, fmt.Errorf("%s:%d: data-%s=%q: %s", filepath.Base(f), i+1, m[1], m[2], fix))
 				}
 			}
 		}

@@ -15,7 +15,7 @@ type tool struct {
 
 // tools are the toolbar's, in its order: drawing, then the patterns.
 var tools = func() []tool {
-	ts := []tool{{Name: "draw", Title: "Draw", About: "Draw cells by dragging over the board; a stroke that starts on a live cell clears instead.", Shape: pattern("draw", "Draw", "", "O")}}
+	ts := []tool{{Name: ToolDraw, Title: "Draw", About: "Draw cells by dragging over the board; a stroke that starts on a live cell clears instead.", Shape: pattern(ToolDraw, "Draw", "", "O")}}
 	for _, p := range Patterns {
 		ts = append(ts, tool{Name: p.Name, Title: p.Title, About: p.About, Shape: p})
 	}

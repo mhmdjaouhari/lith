@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 	"github.com/zweiundeins/lith/site/internal/ds/dscheck"
 )
 
@@ -88,15 +89,14 @@ func TestPayload(t *testing.T) {
 
 // TestExpressions pins what the typed builders write for the form.
 func TestExpressions(t *testing.T) {
-	want := `$_guestbook.op === "" && ($_guestbook.name).trim() && ($_guestbook.message).trim() && (
-	$_guestbook.problem = "",
-	$_guestbook.op = Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-	@post("/cmd/guestbook/sign", {payload: {"op": $_guestbook.op, "name": $_guestbook.name, "message": $_guestbook.message, tab: $_tab}, "requestCancellation":"disabled"})
-)`
+	want := ds.Expr(`(($_guestbook.op === "") && (($_guestbook.name).trim()) && (($_guestbook.message).trim())) && (` +
+		`$_guestbook.problem = "", ` +
+		`$_guestbook.op = Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ` +
+		`@post("/cmd/guestbook/sign", {payload: {"op": $_guestbook.op, "name": $_guestbook.name, "message": $_guestbook.message, tab: $_tab}, "requestCancellation":"disabled"}))`)
 	if sign != want {
 		t.Errorf("sign:\n%s\nwant\n%s", sign, want)
 	}
-	if want := `$_guestbook.op !== "" && $_guestbook.ack === $_guestbook.op && ($_guestbook.accepted && ($_guestbook.message = ""), $_guestbook.op = "")`; settle != want {
+	if want := ds.Expr(`(($_guestbook.op !== "") && ($_guestbook.ack === $_guestbook.op)) && ($_guestbook.accepted && ($_guestbook.message = ""), $_guestbook.op = "")`); settle != want {
 		t.Errorf("settle:\n%s\nwant\n%s", settle, want)
 	}
 }

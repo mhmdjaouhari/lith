@@ -2,12 +2,20 @@
 
 // The names of the page's markup that the templates and the controller share (//ds:dom).
 export const AttrColour = "data-colour"
-export const AttrReset = "data-reset"
 export const IdBoard = "life-board"
 export const IdRow = "life-r-"
 export const ClassField = "life__field"
 export const ClassMarks = "life__marks"
 export const ClassCursor = "life__cursor"
+export const ActBegin = "lifeBegin"
+export const ActMove = "lifeMove"
+export const ActEnd = "lifeEnd"
+export const ActAway = "lifeAway"
+export const ActDrop = "lifeDrop"
+export const ActKey = "lifeKey"
+
+/** The actions the page's markup calls (@name()), which the controller implements: lith-ui's actions<Actions>(). */
+export type Actions = "lifeBegin" | "lifeMove" | "lifeEnd" | "lifeAway" | "lifeDrop" | "lifeKey"
 
 // The constants that the Go code and the controller share (//ds:const).
 export const W = 80
@@ -19,6 +27,7 @@ export const MaxStroke = 64
 export const StrokeBatch = 48
 export const FlushMillis = 100
 export const CellClasses = "_abcdefghw"
+export const ToolDraw = "draw"
 
 /** The signals of the Go struct Signals. The page declares them under $_life. */
 export interface Signals {

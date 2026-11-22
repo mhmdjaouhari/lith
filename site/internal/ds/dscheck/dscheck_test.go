@@ -103,6 +103,32 @@ func TestCheckDOM(t *testing.T) {
 	}
 }
 
+// TestCheckDOMActions checks the actions a page calls against its Act…
+// names: each Act… is called, and each call is Datastar's, lith-ui's or
+// an Act….
+func TestCheckDOMActions(t *testing.T) {
+	page := `<div data-on:pointerdown="@xBegin()" data-on:click="$_x.op = @orderedOpId(), @post('/cmd/x/go')"></div>`
+	if errs := CheckDOM(page, "", map[string]string{"ActBegin": "xBegin"}); len(errs) > 0 {
+		t.Fatalf("%v", errs)
+	}
+	// Datastar reads @name( inside a string too, so dscheck does.
+	page += `<p data-text="'@notCalled(' + 1"></p>`
+	errs := CheckDOM(page, "", map[string]string{"ActBegin": "xBegun", "ActEnd": "xEnd"})
+	var got []string
+	for _, err := range errs {
+		got = append(got, err.Error())
+	}
+	want := []string{`ActBegin = "xBegun" is not on the page or in its CSS`, `ActEnd = "xEnd" is not on the page or in its CSS`, `@notCalled(): no action`, `@xBegin(): no action`}
+	if len(got) != len(want) {
+		t.Fatalf("%v", got)
+	}
+	for i := range want {
+		if !strings.Contains(got[i], want[i]) {
+			t.Errorf("%s, want %s", got[i], want[i])
+		}
+	}
+}
+
 func TestLint(t *testing.T) {
 	dir := t.TempDir()
 	src := "templ X() {\n\t<p data-show=\"$_x.op\" data-text={ s }></p>\n\t<p data-card=\"3\" data-on:click={ x }></p>\n\t<p data-on:click__window=\"@post('/x')\"></p>\n}\n"

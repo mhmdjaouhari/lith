@@ -1,20 +1,21 @@
-// The Game of Life's controller, on the stage (data-life). It follows the
-// pointer and the keyboard's cursor over the board, sends a stroke's cells
-// in batches as it is drawn, drops patterns, picks the colour, resets the
-// board, and keeps what was sent pending, drawn over the board, until the
-// tab's view confirms it. It reads the page by the names that dom.go
-// shares with the templates and the frames.
+// The Game of Life's controller, on the stage (data-life). The markup says
+// which element answers which event (views.templ); this module implements
+// the actions it calls there that take more than a line: a stroke's cells
+// sent in batches as it is drawn, a pattern dropped where the board was
+// clicked, the keyboard's cursor. It also ends what is pending. It reads
+// the page by the names that dom.go shares with the templates and the
+// frames.
 //
 // Nothing here changes the board. Every action goes to the server, and
 // the next generation's frame, which the stream morphs into the board,
 // shows it.
 
-import { clamp, commands, controller, measured, must, num, orderedOpId, pending, signals } from 'lith-ui'
-import { AttrColour, AttrReset, CellClasses, ClassCursor, ClassField, ClassMarks, type Commands, FlushMillis, H, IdBoard, IdRow, type Roots, StrokeBatch, W } from './ds.gen'
+import { actions, clamp, commands, controller, measured, must, orderedOpId, pending, signals } from 'lith-ui'
+import { type Actions, CellClasses, ClassCursor, ClassField, ClassMarks, type Commands, FlushMillis, H, IdBoard, IdRow, type Roots, StrokeBatch, ToolDraw, W } from './ds.gen'
 
 controller('life', (el, scope) => {
 	const s = signals<Roots>()._life
-	// Every action goes out from the stage, which pending counts.
+	// The strokes and the drops go out from the stage, which pending counts.
 	const send = commands<Commands>(el)
 	const field = must(el, `.${ClassField}`)
 
@@ -66,50 +67,6 @@ controller('life', (el, scope) => {
 		sent = Date.now()
 	}
 
-	// A stroke starts where the pointer goes down: it clears where it
-	// starts on a live cell, and draws where it starts on a dead one.
-	scope.listen(field, 'pointerdown', (evt) => {
-		if (s.tool !== 'draw' || !evt.isPrimary || evt.button !== 0) return
-		point(evt)
-		field.setPointerCapture(evt.pointerId)
-		drawing = true
-		s.alive = !lives()
-		last = -1
-		stroke = [cell()]
-		s.draft = square()
-		sent = Date.now()
-	})
-
-	// The cursor follows the pointer; a stroke adds each new cell, and
-	// sends once it holds StrokeBatch cells or FlushMillis went by.
-	scope.listen(field, 'pointermove', (evt) => {
-		point(evt)
-		if (!drawing) return
-		const c = cell()
-		if (!stroke.includes(c)) {
-			stroke.push(c)
-			s.draft += square()
-		}
-		if (stroke.length >= StrokeBatch || Date.now() - sent > FlushMillis) flush()
-	})
-
-	// The stroke ends: the rest of it goes.
-	const end = (): void => {
-		if (!drawing) return
-		flush()
-		drawing = false
-	}
-	scope.listen(field, 'pointerup', end)
-	scope.listen(field, 'pointercancel', end)
-	scope.listen(field, 'lostpointercapture', end)
-
-	// The cursor goes when the pointer or the focus leaves the board.
-	const away = (): void => {
-		if (!drawing) s.x = -1
-	}
-	scope.listen(field, 'pointerleave', away)
-	scope.listen(field, 'blur', away)
-
 	/** Drops the pattern at the cursor, and shows its outline pending there. */
 	const drop = (): void => {
 		const op = begin()
@@ -128,79 +85,100 @@ controller('life', (el, scope) => {
 		send('life-draw', { op, cells: [cell()], alive: s.alive })
 	}
 
-	// A click drops the pattern where the board was clicked.
-	scope.listen(field, 'click', (evt) => {
-		if (s.tool === 'draw') return
-		point(evt)
-		drop()
-	})
-
-	// The keyboard: the arrows move the cursor (the board wraps around,
-	// and on its side they move along its rows and columns as they show),
-	// Enter or Space draws or drops, R turns the pattern, Escape hides the
-	// cursor.
+	// The keyboard's arrows move the cursor; the board wraps around, and on
+	// its side they move along its rows and columns as they show.
 	const arrows: Partial<Record<string, readonly [number, number]>> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }
 	const centre = (): void => {
 		if (s.x >= 0) return
 		s.x = W / 2
 		s.y = H / 2
 	}
-	scope.listen(field, 'keydown', (evt) => {
-		const k = evt.key
-		const step = arrows[k]
-		if (step) {
-			evt.preventDefault()
-			centre()
-			const [a, b] = box().side ? [step[1], step[0]] : step
-			s.x = (s.x + a + W) % W
-			s.y = (s.y + b + H) % H
-		} else if (k === 'Enter' || k === ' ') {
-			evt.preventDefault()
-			centre()
-			if (s.tool === 'draw') toggle()
-			else drop()
-		} else if (k === 'r' || k === 'R') {
-			s.turn = s.turn + 1
-		} else if (k === 'Escape') {
-			s.x = -1
-		}
-	})
 
-	// A swatch asks for its colour, which stays pending until the tab's view
-	// brings it back as colour; the reset asks to clear the board.
-	scope.listen(el, 'click', (evt) => {
-		const t = evt.target instanceof Element ? evt.target : null
-		const swatch = t?.closest(`[${AttrColour}]`)
-		if (swatch) {
-			const colour = num(swatch, AttrColour)
-			s.pick = colour
-			s.problem = ''
-			send('life-colour', { colour })
-		} else if (t?.closest(`[${AttrReset}]`) && !s.resetting) {
-			const op = begin()
-			s.resetting = true
-			send('life-reset', { op })
-		}
-	})
+	actions<Actions>(el, scope, {
+		// A stroke starts where the pointer goes down, with the draw tool: it
+		// clears where it starts on a live cell, and draws where it starts on
+		// a dead one.
+		lifeBegin({ evt }) {
+			if (!(evt instanceof PointerEvent) || !evt.isPrimary || evt.button !== 0) return
+			point(evt)
+			field.setPointerCapture(evt.pointerId)
+			drawing = true
+			s.alive = !lives()
+			last = -1
+			stroke = [cell()]
+			s.draft = square()
+			sent = Date.now()
+		},
 
-	// The tab's view confirms the newest op, and with it the older ones (op
-	// ids grow with time): what was pending goes, and the board's frame
-	// shows it.
-	scope.effect(() => {
-		if (s.op === '' || !(s.ack >= s.op)) return
-		s.op = ''
-		s.pend = ''
-		s.ptool = ''
-		s.resetting = false
+		// The cursor follows the pointer; a stroke adds each new cell, and
+		// sends once it holds StrokeBatch cells or FlushMillis went by.
+		lifeMove({ evt }) {
+			if (!(evt instanceof PointerEvent)) return
+			point(evt)
+			if (!drawing) return
+			const c = cell()
+			if (!stroke.includes(c)) {
+				stroke.push(c)
+				s.draft += square()
+			}
+			if (stroke.length >= StrokeBatch || Date.now() - sent > FlushMillis) flush()
+		},
+
+		// The stroke ends: the rest of it goes.
+		lifeEnd() {
+			if (!drawing) return
+			flush()
+			drawing = false
+		},
+
+		// The cursor goes when the pointer or the focus leaves the board,
+		// unless a stroke holds the pointer.
+		lifeAway() {
+			if (!drawing) s.x = -1
+		},
+
+		// A click drops the pattern, with a pattern's tool, where the board
+		// was clicked.
+		lifeDrop({ evt }) {
+			if (!(evt instanceof MouseEvent)) return
+			point(evt)
+			drop()
+		},
+
+		// Arrows move the cursor, Enter or Space draws or drops, R turns the
+		// pattern, Escape hides the cursor.
+		lifeKey({ evt }) {
+			if (!(evt instanceof KeyboardEvent)) return
+			const k = evt.key
+			const step = arrows[k]
+			if (step) {
+				evt.preventDefault()
+				centre()
+				const [a, b] = box().side ? [step[1], step[0]] : step
+				s.x = (s.x + a + W) % W
+				s.y = (s.y + b + H) % H
+			} else if (k === 'Enter' || k === ' ') {
+				evt.preventDefault()
+				centre()
+				if (s.tool === ToolDraw) toggle()
+				else drop()
+			} else if (k === 'r' || k === 'R') {
+				s.turn = s.turn + 1
+			} else if (k === 'Escape') {
+				s.x = -1
+			}
+		},
 	})
 
 	// What waits on the page: the newest op until the tab's view confirms
 	// it, and a colour asked for until the session has it. It ends on
 	// those, a request that never got through, or a stream that connects
-	// again without them, never on a clock.
+	// again without them, never on a clock. The swatches and the reset post
+	// from their own buttons, inside the stage: within counts them.
 	pending(el, scope, {
 		signals: s,
 		root: '_life' satisfies keyof Roots,
+		within: true,
 		waiting: () => (s.op !== '' && !(s.ack >= s.op)) || s.pick !== s.colour,
 		end: () => {
 			s.op = ''

@@ -48,13 +48,13 @@ func choose(field string, value string) string {
 
 // pressed is the button of the tab's choice, as the server last said.
 func pressed(field, value string) string {
-	return ds.Aria(`$_stream.` + field + ` === '` + value + `'`)
+	return string(ds.Aria(ds.Expr(`$_stream.` + field + ` === '` + value + `'`)))
 }
 
 // busy marks the button whose change is on its way; aria-busy reads an
 // empty value as false, so false removes it.
 func busy(field, value string) string {
-	return ds.AriaBusy(`$_stream.want === '` + field + `:` + value + `'`)
+	return string(ds.AriaBusy(ds.Expr(`$_stream.want === '` + field + `:` + value + `'`)))
 }
 
 // settle ends the pending state when the tab's stream brings the op back.

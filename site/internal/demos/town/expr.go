@@ -127,7 +127,7 @@ const posLabel = `+$_town.want >= $_town.head ? 'Now' : 'Position ' + (+$_town.w
 const badge = `$_badge = $_town.at !== 0 ? 'past' : ''`
 
 // pending is true while a seek waits for the server.
-var pending = ds.AriaBusy(`$_town.mine !== $_town.seq`)
+var pending = ds.AriaBusy(ds.Expr(`$_town.mine !== $_town.seq`))
 
 func expr(s string) string {
 	return strings.NewReplacer("COLS", strconv.Itoa(Cols), "TILES", strconv.Itoa(Tiles)).Replace(s)

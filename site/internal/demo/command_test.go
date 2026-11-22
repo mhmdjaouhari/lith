@@ -30,7 +30,7 @@ var (
 func TestPostSignals(t *testing.T) {
 	c := demo.Command[noteReq]{}
 	got := c.PostSignals(demo.Post{RequestCancellation: "disabled"}, demo.From("op", noteOp), demo.From("text", noteText), demo.From("pin", notePin))
-	want := `@post("/cmd/notes/add", {payload: {"op": $_notes.op, "text": $_notes.text, "pin": $_notes.pin, tab: $_tab}, "requestCancellation":"disabled"})`
+	want := ds.Expr(`@post("/cmd/notes/add", {payload: {"op": $_notes.op, "text": $_notes.text, "pin": $_notes.pin, tab: $_tab}, "requestCancellation":"disabled"})`)
 	if got != want {
 		t.Errorf("got  %s\nwant %s", got, want)
 	}

@@ -22,6 +22,16 @@
 		gap: var(--lith-space-4);
 	}
 
+	/* --me follows the colour the stage says (data-colour). */
+	.life[data-colour="1"] { --me: var(--life-a); }
+	.life[data-colour="2"] { --me: var(--life-b); }
+	.life[data-colour="3"] { --me: var(--life-c); }
+	.life[data-colour="4"] { --me: var(--life-d); }
+	.life[data-colour="5"] { --me: var(--life-e); }
+	.life[data-colour="6"] { --me: var(--life-f); }
+	.life[data-colour="7"] { --me: var(--life-g); }
+	.life[data-colour="8"] { --me: var(--life-h); }
+
 	/* ── Counters ───────────────────────────────────────────────────── */
 	.life__stats {
 		display: grid;

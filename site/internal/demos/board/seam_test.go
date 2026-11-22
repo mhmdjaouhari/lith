@@ -167,7 +167,7 @@ func TestExpressions(t *testing.T) {
 	for got, want := range map[string]string{
 		post["data-on:board-move"].(string):        `@post("/cmd/board/move", {payload: {...evt.detail, tab: $_tab}, "requestCancellation":"disabled"})`,
 		helloPosts["data-on:board-hello"].(string): `@post("/cmd/board/hello", {payload: {...evt.detail, tab: $_tab}, "retry":"error","retryMaxCount":5})`,
-		S.Mode.Eq(Pointer):                         `$_board.mode === "pointer"`,
+		string(S.Mode.Eq(Pointer)):                 `$_board.mode === "pointer"`,
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)

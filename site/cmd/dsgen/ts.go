@@ -59,8 +59,19 @@ func tsSource(sigs []signals, cmds []command, doms []domConst, vals []valueConst
 	fmt.Fprintf(&b, "// %s\n", header)
 	if len(doms) > 0 {
 		b.WriteString("\n// The names of the page's markup that the templates and the controller share (//ds:dom).\n")
+		var acts []string
 		for _, d := range doms {
 			fmt.Fprintf(&b, "export const %s = %q\n", d.name, d.value)
+			if strings.HasPrefix(d.name, "Act") {
+				acts = append(acts, fmt.Sprintf("%q", d.value))
+			}
+		}
+		// The controller implements every action the markup calls: lith-ui's
+		// actions<Actions>() takes one function for each, and tsc fails on
+		// one missing.
+		if len(acts) > 0 {
+			b.WriteString("\n/** The actions the page's markup calls (@name()), which the controller implements: lith-ui's actions<Actions>(). */\n")
+			fmt.Fprintf(&b, "export type Actions = %s\n", strings.Join(acts, " | "))
 		}
 	}
 	if len(vals) > 0 {

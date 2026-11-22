@@ -11,12 +11,17 @@ import (
 // each must be on the page the package renders.
 var dsDOM = map[string]string{
 	"AttrColour":  AttrColour,
-	"AttrReset":   AttrReset,
 	"IdBoard":     IdBoard,
 	"IdRow":       IdRow,
 	"ClassField":  ClassField,
 	"ClassMarks":  ClassMarks,
 	"ClassCursor": ClassCursor,
+	"ActBegin":    ActBegin,
+	"ActMove":     ActMove,
+	"ActEnd":      ActEnd,
+	"ActAway":     ActAway,
+	"ActDrop":     ActDrop,
+	"ActKey":      ActKey,
 }
 
 // SignalsRefs are the signals of Signals, each a ds.Ref.

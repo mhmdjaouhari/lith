@@ -47,6 +47,24 @@ export interface AttributePlugin {
 /** Registers an attribute plugin. One registered after the page started applies to the elements already there. */
 export function attribute(plugin: AttributePlugin): void
 
+export interface ActionContext {
+	/** The element whose expression called the action. */
+	el: HTMLElement
+	/** The event of a data-on expression; undefined elsewhere. */
+	evt: Event | undefined
+	error(name: string): Error
+}
+
+export interface ActionPlugin {
+	/** The name an expression calls it by: lifeDrop for @lifeDrop(). Letters, digits, _ and $. */
+	name: string
+	/** Runs for each call, with the call's arguments; what it returns is the call's value. */
+	apply(ctx: ActionContext, ...args: never[]): unknown
+}
+
+/** Registers an action, which expressions call as @name(...). A second one of the same name replaces the first. */
+export function action(plugin: ActionPlugin): void
+
 /** What a request of an action (@get, @post...) went through, in the order it may: started, retrying, error, retries-failed, finished. */
 export type FetchType = 'started' | 'finished' | 'error' | 'retrying' | 'retries-failed'
 

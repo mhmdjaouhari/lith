@@ -251,7 +251,9 @@ func valueConsts(pkg *types.Package, gd *ast.GenDecl) ([]valueConst, error) {
 }
 
 // domConsts reads a //ds:dom const block: exported string constants, each
-// a data- attribute's name, a class, or a custom property (--x).
+// a data- attribute's name, a class, a custom property (--x), or, for an
+// Act…, the name of an action the markup calls and the controller
+// implements.
 func domConsts(pkg *types.Package, gd *ast.GenDecl) ([]domConst, error) {
 	var out []domConst
 	for _, spec := range gd.Specs {
@@ -261,7 +263,11 @@ func domConsts(pkg *types.Package, gd *ast.GenDecl) ([]domConst, error) {
 				return nil, fmt.Errorf("//ds:dom %s: an exported string constant", id.Name)
 			}
 			v := constant.StringVal(c.Val())
-			if !domPattern.MatchString(v) {
+			if strings.HasPrefix(id.Name, "Act") {
+				if !actPattern.MatchString(v) {
+					return nil, fmt.Errorf("//ds:dom %s = %q: an action's name, letters and digits from a lowercase letter (@%s())", id.Name, v, v)
+				}
+			} else if !domPattern.MatchString(v) {
 				return nil, fmt.Errorf("//ds:dom %s = %q: a data- attribute, a class or a custom property", id.Name, v)
 			}
 			out = append(out, domConst{id.Name, v})
@@ -270,7 +276,12 @@ func domConsts(pkg *types.Package, gd *ast.GenDecl) ([]domConst, error) {
 	return out, nil
 }
 
-var domPattern = regexp.MustCompile(`^(data-[a-z][a-z0-9-]*|--[a-z][a-z0-9-]*|[a-z][a-z0-9_-]*)$`)
+var (
+	domPattern = regexp.MustCompile(`^(data-[a-z][a-z0-9-]*|--[a-z][a-z0-9-]*|[a-z][a-z0-9_-]*)$`)
+	// actPattern is an Act…'s value: a name Datastar reads after @ and
+	// dscheck finds, without the $ and _ that Datastar takes too.
+	actPattern = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
+)
 
 // directives returns the //ds: lines of a comment, split into words.
 func directives(doc *ast.CommentGroup) [][]string {

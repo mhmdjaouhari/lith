@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zweiundeins/lith/site/internal/ds"
 	"github.com/zweiundeins/lith/site/internal/format"
 )
 
@@ -11,10 +12,19 @@ import (
 // pointer's outline over it, the colours' shares, the tools, the colours,
 // and the reset. The stage holds the signals; no frame morphs it.
 // data-life mounts its controller (life.ts) once its signals are
-// declared: it draws, drops, picks and resets through the actions the
-// stage posts, and ends what is pending.
+// declared: it implements the field's actions, which draw and drop
+// through the commands the stage posts, and ends what is pending. The
+// swatches and the reset post by themselves.
 templ Stage(b Board, here, colour int, now time.Time) {
-	<div class="life" data-signals={ NewSignals(colour).Decl() } data-life data-attr:style={ me } { posts... }>
+	<div
+		class="life"
+		data-signals={ NewSignals(colour).Decl() }
+		data-life
+		data-colour={ strconv.Itoa(colour) }
+		data-attr:data-colour={ S.Colour }
+		data-effect={ settle }
+		{ posts... }
+	>
 		@Stats(b, here)
 		<div
 			class={ ClassField }
@@ -22,13 +32,22 @@ templ Stage(b Board, here, colour int, now time.Time) {
 			role="application"
 			aria-label="The board, 80 by 50 cells. Arrow keys move the cursor, Enter draws or drops, R turns the pattern."
 			data-class:is-drawing={ drawing }
+			data-on:pointerdown={ begin }
+			data-on:pointermove={ ds.Call(ActMove) }
+			data-on:pointerup={ ds.Call(ActEnd) }
+			data-on:pointercancel={ ds.Call(ActEnd) }
+			data-on:lostpointercapture={ ds.Call(ActEnd) }
+			data-on:pointerleave={ ds.Call(ActAway) }
+			data-on:blur={ ds.Call(ActAway) }
+			data-on:click={ dropped }
+			data-on:keydown={ ds.Call(ActKey) }
 		>
 			@boardCells(b.Cells, b.Trail)
 			<svg class={ ClassMarks } viewBox="0 0 80 50" preserveAspectRatio="none" aria-hidden="true" data-class:is-clearing={ clearing }>
 				<path data-attr:d={ marks }></path>
 			</svg>
-			@outline(ClassCursor, cursorOn, cursorFor, cursor)
-			@outline(ClassCursor+" life__cursor--stamp", stampOn, stampFor, stamp)
+			@outline(ClassCursor, cursorOn, S.Tool, S.X, S.Y, S.Turn)
+			@outline(ClassCursor+" life__cursor--stamp", stampOn, S.PTool, S.PX, S.PY, S.PTurn)
 		</div>
 		@Share(b.Cells)
 		<div class="life__controls">
@@ -50,7 +69,7 @@ templ Stage(b Board, here, colour int, now time.Time) {
 					class="btn btn--sm life__turn"
 					title="Turn the pattern a quarter clockwise (R)"
 					data-attr:disabled={ drawing }
-					data-on:click={ turn }
+					data-on:click={ S.Turn.Inc() }
 				>
 					<svg class="life__icon life__icon--turn" viewBox="0 0 10 9" style="--w: 10; --h: 9" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M5 0h1v1h-1zM5 1h2v1h-2zM2 2h6v1h-6zM1 3h1v1h-1zM5 3h2v1h-2zM0 4h1v1h-1zM5 4h1v1h-1zM0 5h1v1h-1zM0 6h1v1h-1zM8 6h1v1h-1zM1 7h1v1h-1zM7 7h1v1h-1zM2 8h5v1h-5z"></path></svg>
 					<span>Turn</span>
@@ -67,7 +86,7 @@ templ Stage(b Board, here, colour int, now time.Time) {
 						aria-pressed={ strconv.FormatBool(c == colour) }
 						data-attr:aria-pressed={ picked(c) }
 						data-attr:aria-busy={ picking(c) }
-						{ templ.Attributes{AttrColour: strconv.Itoa(c)}... }
+						data-on:click={ pick(c) }
 					></button>
 				}
 			</div>
@@ -76,19 +95,27 @@ templ Stage(b Board, here, colour int, now time.Time) {
 			@Status(b, now)
 			<div class="life__reset">
 				@Outcome(TabState{})
-				<button type="button" class="btn btn--sm" data-reset data-attr:aria-busy={ resetting }>Reset</button>
+				<button type="button" class="btn btn--sm" data-attr:aria-busy={ resetting } data-on:click={ reset }>Reset</button>
 			</div>
 		</div>
-		<p class="outcome is-refused life__problem" role="alert" style="display: none" data-show={ problem } data-text={ problem }></p>
+		<p class="outcome is-refused life__problem" role="alert" style="display: none" data-show={ S.Problem } data-text={ S.Problem }></p>
 	</div>
 }
 
-// outline is a pattern's outline over the board, at the cell and with the
-// turn its style says: one for every tool, of which CSS shows the one
-// named by the tool signal. Each comes as it lies, and on its side for the
-// board on its side.
-templ outline(class, show, name, style string) {
-	<div class={ class } aria-hidden="true" data-class:is-on={ show } data-attr:data-tool={ name } data-attr:style={ style }>
+// outline is a pattern's outline over the board, shown while show holds,
+// at the cell x, y and turned as the signals say: one for every tool, of
+// which CSS shows the one tool names. Each comes as it lies, and on its
+// side for the board on its side.
+templ outline(class string, show ds.Expr, tool ds.Ref[string], x, y, turn ds.Ref[int]) {
+	<div
+		class={ class }
+		aria-hidden="true"
+		data-class:is-on={ show }
+		data-attr:data-tool={ tool }
+		data-style:--x={ x }
+		data-style:--y={ y }
+		data-style:--turn={ turn }
+	>
 		for _, t := range tools {
 			<svg class="life__shape" data-shape={ t.Name } viewBox={ box(t.Shape, false) } preserveAspectRatio="none" style={ shapeStyle(t.Shape) }>
 				<rect width={ strconv.Itoa(t.Shape.W) } height={ strconv.Itoa(t.Shape.H) }></rect>

@@ -88,24 +88,27 @@ type Signals struct {
 }
 ```
 
-Pressing **Sign** makes an op id and posts the form; the inputs turn read-only and the button busy while `$_guestbook.op` is set. `PostSignals` builds the payload from the signals and checks it against `SignReq` as the package loads: a key it lacks or misspells, or a signal of the wrong type, stops the site before any page sends it.
+Pressing **Sign** makes an op id and posts the form; the inputs turn read-only and the button busy while `$_guestbook.op` is set. The expression is Go: the `ds` builders (`If`, `And`, `Trimmed`) put refs and values together, and the template takes the result as an attribute's value, `data-on:submit__prevent={ sign }`. `PostSignals` builds the payload from the signals and checks it against `SignReq` as the package loads: a key it lacks or misspells, or a signal of the wrong type, stops the site before any page sends it.
 
 ```go title=expr.go
-var sign = S.Op.Eq("") + " && " + ds.Trimmed(S.Name.String()) + " && " + ds.Trimmed(S.Message.String()) + ` && (
-	` + S.Problem.Assign("") + `,
-	` + S.Op.String() + ` = Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-	` + SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},
-	demo.From("op", S.Op),
-	demo.From("name", S.Name),
-	demo.From("message", S.Message),
-) + `
-)`
+var sign = ds.If(ds.And(S.Op.Eq(""), ds.Trimmed(S.Name), ds.Trimmed(S.Message)),
+	S.Problem.Assign(""),
+	S.Op.To(ds.OpID),
+	SignAction.PostSignals(demo.Post{RequestCancellation: "disabled"},
+		demo.From("op", S.Op),
+		demo.From("name", S.Name),
+		demo.From("message", S.Message),
+	),
+)
 ```
 
 When the tab's view brings back the same op id, the pending state ends, and an accepted message is cleared:
 
 ```go title=expr.go
-var settle = pending + " && " + S.Ack.String() + " === " + S.Op.String() + " && (" + S.Accepted.String() + " && (" + S.Message.Assign("") + "), " + S.Op.Assign("") + ")"
+var settle = ds.If(ds.And(pending, S.Ack.Is(S.Op)),
+	ds.If(S.Accepted, S.Message.Assign("")),
+	S.Op.Assign(""),
+)
 ```
 
 The form needs no more than these lines, so it has no controller. A demo whose page logic grows past a line moves it into a TypeScript controller that tsc checks against the same structs, as the board, the checkboxes and the Game of Life do.

@@ -6,68 +6,75 @@ import (
 )
 
 // The Datastar expressions of the demo, built from the typed refs of its
-// signals (S) and its typed commands: none names a signal or a route by
-// hand. The strokes, the drops, the keyboard, the colours, the reset and
-// the pending state live in life.ts, which tsc checks against the same
-// structs.
+// signals (S), its actions (Act…, which life.ts implements) and its typed
+// commands: none names a signal, an action or a route by hand. A stroke,
+// a drop and the keyboard take more than a line and live in life.ts; the
+// rest is here, next to the markup that runs it (views.templ).
 
-// posts post the actions life.ts dispatches on the stage, whose requests
-// lith-ui's pending counts: requestCancellation 'disabled', so that every
-// batch of a stroke arrives and no action cancels the one before.
-var posts = demo.Attrs(
-	DrawAction.On(demo.Post{RequestCancellation: "disabled"}),
-	DropAction.On(demo.Post{RequestCancellation: "disabled"}),
-	ResetAction.On(demo.Post{RequestCancellation: "disabled"}),
-	ColourAction.On(demo.Post{RequestCancellation: "disabled"}),
-)
+// post is how every action posts: requestCancellation 'disabled', so that
+// every batch of a stroke arrives and no action cancels the one before.
+// lith-ui's pending counts the requests of the stage and of the buttons
+// in it.
+var post = demo.Post{RequestCancellation: "disabled"}
+
+// posts post the strokes and the drops life.ts dispatches on the stage.
+var posts = demo.Attrs(DrawAction.On(post), DropAction.On(post))
 
 // useTool picks a tool, and toolPressed is its button's aria-pressed.
-func useTool(name string) string     { return S.Tool.Assign(name) }
-func toolPressed(name string) string { return ds.Aria(S.Tool.Eq(name)) }
+func useTool(name string) ds.Expr     { return S.Tool.Assign(name) }
+func toolPressed(name string) ds.Expr { return ds.Aria(S.Tool.Eq(name)) }
 
 // drawing is true while the tool draws: the field's crosshair, and the
 // turn button, which has nothing to turn.
-var drawing = S.Tool.Eq("draw")
+var drawing = S.Tool.Eq(ToolDraw)
 
-// turn turns the pattern a quarter clockwise.
-var turn = S.Turn.String() + " = " + S.Turn.String() + " + 1"
+// The field's events: the draw tool strokes, a pattern drops on a click.
+var (
+	begin   = ds.If(drawing, ds.Call(ActBegin))
+	dropped = ds.If(ds.Not(drawing), ds.Call(ActDrop))
+)
 
-// picked and picking are a swatch's aria-pressed and aria-busy: data-attr
-// writes true as an empty value, which aria-busy reads as false.
-func picked(c int) string { return ds.Aria(S.Colour.Eq(c)) }
-func picking(c int) string {
-	return ds.AriaBusy(S.Pick.Eq(c) + " && " + S.Colour.Ne(c))
+// pick asks for the colour c, which stays pending until the tab's view
+// brings it back as colour; picked and picking are its swatch's
+// aria-pressed and aria-busy.
+func pick(c int) ds.Expr {
+	return ds.Do(S.Pick.Assign(c), S.Problem.Assign(""), ColourAction.PostSignals(post, demo.From("colour", S.Pick)))
 }
+func picked(c int) ds.Expr  { return ds.Aria(S.Colour.Eq(c)) }
+func picking(c int) ds.Expr { return ds.AriaBusy(ds.And(S.Pick.Eq(c), S.Colour.Ne(c))) }
 
-// resetting is the reset button's aria-busy.
-var resetting = ds.AriaBusy(S.Resetting.String())
+// reset asks to clear the board, one reset at a time, as a new op;
+// resetting is its button's aria-busy.
+var (
+	reset = ds.If(ds.Not(S.Resetting),
+		S.Problem.Assign(""),
+		S.Op.To(ds.OrderedOpID),
+		S.Resetting.Assign(true),
+		ResetAction.PostSignals(post, demo.From("op", S.Op)),
+	)
+	resetting = ds.AriaBusy(S.Resetting)
+)
+
+// settle ends what was pending once the tab's view confirms the newest op,
+// and with it the older ones (op ids grow with time): the board's frame
+// shows it.
+var settle = ds.If(ds.And(S.Op.Ne(""), S.Ack.AtLeast(S.Op)),
+	S.Op.Assign(""),
+	S.Pend.Assign(""),
+	S.PTool.Assign(""),
+	S.Resetting.Assign(false),
+)
 
 // marks are the stroke's cells, sent and not, as one SVG path; clearing
 // marks a stroke that clears.
 var (
-	marks    = S.Pend.String() + " + " + S.Draft.String()
-	clearing = "!" + S.Alive.String()
+	marks    = ds.Concat(S.Pend, S.Draft)
+	clearing = ds.Not(S.Alive)
 )
 
-// The outlines: the pattern under the pointer or the cursor, and the one
-// dropped last until it is confirmed, each shown, named and placed by its
-// signals.
+// The outlines show while they have a cell: the pattern under the pointer
+// or the cursor, and the one dropped last until it is confirmed.
 var (
-	cursorOn  = S.X.String() + " >= 0"
-	stampOn   = S.PTool.Ne("")
-	cursor    = outlineAt(S.X.String(), S.Y.String(), S.Turn.String())
-	stamp     = outlineAt(S.PX.String(), S.PY.String(), S.PTurn.String())
-	cursorFor = S.Tool.String()
-	stampFor  = S.PTool.String()
+	cursorOn = S.X.Ge(0)
+	stampOn  = S.PTool.Ne("")
 )
-
-func outlineAt(x, y, turn string) string {
-	return `'--x:' + ` + x + ` + ';--y:' + ` + y + ` + ';--turn:' + ` + turn
-}
-
-// me is the stage's --me, the colour this tab draws in, for the outlines
-// and the pending marks.
-var me = `'--me: var(--life-' + ' abcdefgh'[` + S.Colour.String() + `] + ')'`
-
-// The problem's line.
-var problem = S.Problem.String()

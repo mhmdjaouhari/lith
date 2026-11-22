@@ -204,8 +204,8 @@ func PendingOf(s PendingSignalsRefs) Pending {
 	return Pending{
 		Sig:      sig,
 		Match:    "evt.detail.el === el",
-		Waiting:  s.Op.Ne("") + " && " + s.Ack.String() + " !== " + s.Op.String(),
-		End:      s.Op.Assign(""),
+		Waiting:  string(s.Op.Ne("")) + " && " + s.Ack.String() + " !== " + s.Op.String(),
+		End:      string(s.Op.Assign("")),
 		Inflight: s.Inflight.String(),
 		Recheck:  s.Recheck.String(),
 		Problem:  s.Problem.String(),

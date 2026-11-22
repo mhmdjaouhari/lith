@@ -7,7 +7,7 @@
 // The server stays the only one that changes state: a controller only
 // moves local signals and dispatches commands, which the page posts.
 
-import { attribute, beginBatch, effect, endBatch, root, signal } from 'datastar'
+import { action, attribute, beginBatch, effect, endBatch, root, signal } from 'datastar'
 
 /** The page's signals, typed by the Roots that dsgen writes: signals<Roots>()._board. */
 export function signals<R extends object>(): R {
@@ -108,6 +108,47 @@ export function controller(name: string, setup: (el: HTMLElement, scope: Scope) 
 export function commands<C extends object>(el: HTMLElement): <K extends keyof C & string, D extends C[K]>(name: K, detail: Exact<D, C[K]>) => void {
 	return (name, detail) => {
 		el.dispatchEvent(new CustomEvent(name, { detail }))
+	}
+}
+
+/** A call of a controller's action: the event of the data-on that called it, the element it is on, and the call's arguments. */
+export interface ActionCall {
+	evt: Event | undefined
+	el: HTMLElement
+	args: readonly unknown[]
+}
+
+/** The controllers' elements that implement each action, by its name. */
+const bound = new Map<string, Set<{ el: HTMLElement; fn: (call: ActionCall) => unknown }>>()
+
+/**
+ * Implements the actions the markup inside el calls: data-on:click=
+ * "@lifeDrop()" on an element in el runs impl.lifeDrop with the click.
+ * The markup says which element answers which event; the controller,
+ * how. A is dsgen's Actions, the Act… names of //ds:dom, so tsc fails on
+ * an action the markup calls that impl lacks, or one it does not call:
+ * actions<Actions>(el, scope, {...}). Datastar's actions are global: each
+ * name is registered once, and a call runs the implementation of the
+ * controller whose element holds the caller.
+ */
+export function actions<A extends string>(el: HTMLElement, scope: Scope, impl: Record<A, (call: ActionCall) => unknown>): void {
+	for (const name of Object.keys(impl) as A[]) {
+		let set = bound.get(name)
+		if (!set) {
+			const mine = new Set<{ el: HTMLElement; fn: (call: ActionCall) => unknown }>()
+			set = mine
+			bound.set(name, mine)
+			action({
+				name,
+				apply({ el: from, evt }, ...args: unknown[]) {
+					for (const b of mine) if (b.el.contains(from)) return b.fn({ evt, el: from, args })
+					throw new Error(`lith-ui: @${name}() outside its controller's element`)
+				},
+			})
+		}
+		const b = { el, fn: impl[name] }
+		set.add(b)
+		scope.defer(() => set.delete(b))
 	}
 }
 
@@ -410,6 +451,12 @@ export interface PendingOptions {
 	 * op ids from orderedOpId) waits while ack < op.
 	 */
 	waiting?: () => boolean
+	/**
+	 * Counts the requests of the elements inside el too, not only el's: a
+	 * swatch's data-on:click that posts by itself. None of them may be one
+	 * a frame removes, or its count leaks.
+	 */
+	within?: boolean
 }
 
 /** Opens the page's stream again, as sse.Reconnect has the page do. */
@@ -443,7 +490,7 @@ export function pending(el: HTMLElement, scope: Scope, o: PendingOptions): void 
 	}
 	scope.listen(document, 'datastar-fetch', (evt) => {
 		const { type, el: from, argsRaw } = evt.detail
-		if (from !== el) return
+		if (o.within ? !el.contains(from) : from !== el) return
 		switch (type) {
 			case 'started':
 				inflight++
@@ -498,6 +545,11 @@ export function opId(): string {
 export function orderedOpId(): string {
 	return Date.now().toString(36).padStart(9, '0') + opId().slice(0, 8)
 }
+
+// It is an action too, so that an expression makes its op id as a
+// controller does: $_x.op = @orderedOpId() (ds.OrderedOpID). dscheck
+// knows it (Actions).
+action({ name: 'orderedOpId', apply: () => orderedOpId() })
 
 /** The value of a data- attribute as a number; a missing one is an error in the page. */
 export function num(el: Element, name: `data-${string}`): number {

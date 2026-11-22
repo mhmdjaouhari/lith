@@ -32,7 +32,7 @@ const start = `$_writerRace.op === '' && !$_writerRace.active && (
 // busy is aria-busy from the click until the stream brings the outcome:
 // data-attr writes true as an empty value, which aria-busy reads as
 // false.
-var busy = ds.AriaBusy(`$_writerRace.op !== ''`)
+var busy = ds.AriaBusy(ds.Expr(`$_writerRace.op !== ''`))
 
 // settle ends the pending state when the outcome arrives.
 const settle = `$_writerRace.op !== '' && $_writerRace.ack === $_writerRace.op && ($_writerRace.op = '')`

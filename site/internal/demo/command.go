@@ -81,12 +81,12 @@ type Post struct {
 	RetryMaxCount       int    `json:"retryMaxCount,omitempty"`
 }
 
-func (c Command[Req]) post(payload string, o Post) string {
+func (c Command[Req]) post(payload string, o Post) ds.Expr {
 	opts := strings.TrimPrefix(ds.Lit(o), "{")
 	if opts != "}" {
 		opts = ", " + opts
 	}
-	return "@post(" + ds.Lit(c.URL()) + ", {payload: " + payload + opts + ")"
+	return ds.Expr("@post(" + ds.Lit(c.URL()) + ", {payload: " + payload + opts + ")")
 }
 
 // On is the data-on attribute that posts the action whenever the
@@ -94,12 +94,12 @@ func (c Command[Req]) post(payload string, o Post) string {
 // typed, and the tab id. Spread it on the element that listens:
 // <div { cmd.On(post)... }>.
 func (c Command[Req]) On(o Post) templ.Attributes {
-	return templ.Attributes{"data-on:" + c.Event(): c.post("{...evt.detail, tab: "+Tab.String()+"}", o)}
+	return templ.Attributes{"data-on:" + c.Event(): string(c.post("{...evt.detail, tab: "+Tab.String()+"}", o))}
 }
 
 // PostTab is the expression that posts the action with the tab id
 // alone. It panics when Req carries more than the tab.
-func (c Command[Req]) PostTab(o Post) string {
+func (c Command[Req]) PostTab(o Post) ds.Expr {
 	fs := mustFields[Req]()
 	if len(fs) != 1 {
 		panic(fmt.Sprintf("demo: %s carries more than the tab id: post it with On", c.URL()))
@@ -126,7 +126,7 @@ func From[T any](key string, r ds.Ref[T]) Arg {
 // the field's type, and no other key: called as a package's expressions
 // are built, so a payload the server would refuse fails the package's
 // tests, not a person's click.
-func (c Command[Req]) PostSignals(o Post, args ...Arg) string {
+func (c Command[Req]) PostSignals(o Post, args ...Arg) ds.Expr {
 	want := map[string]reflect.Type{}
 	for _, f := range mustFields[Req]() {
 		if f.Key != "tab" {

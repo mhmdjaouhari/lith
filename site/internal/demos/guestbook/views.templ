@@ -24,7 +24,7 @@ templ Stage(list []Entry, total int, now time.Time) {
 				<button class="btn btn--primary" type="submit" data-attr:aria-busy={ busy }>Sign</button>
 				@Outcome(TabState{})
 			</div>
-			<p class="outcome is-problem" role="alert" style="display: none" data-show={ problem } data-text={ problem }></p>
+			<p class="outcome is-problem" role="alert" style="display: none" data-show={ S.Problem } data-text={ S.Problem }></p>
 		</form>
 		@Entries(list, total, now)
 	</div>
