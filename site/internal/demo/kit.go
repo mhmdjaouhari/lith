@@ -94,17 +94,6 @@ func (k *Kit) Fail(w http.ResponseWriter, r *http.Request, err error) {
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
-// Decode reads an action's payload, a JSON body of at most 8 KiB, into v.
-// When it cannot, or the body is empty, it answers a bare 400 itself and
-// returns false: no page of ours sends such a body.
-func Decode(w http.ResponseWriter, r *http.Request, v any) bool {
-	if r.ContentLength == 0 || sse.ReadSignalsLimit(w, r, v, 8<<10) != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return false
-	}
-	return true
-}
-
 // Who returns the viewer of an action: the request's session, and the tab
 // id its payload carries. It reports false when tab is not an id a page
 // makes, and, in an action that Command mounted, when the session has no

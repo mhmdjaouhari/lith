@@ -27,6 +27,14 @@ import (
 // bare status, and the tab's stream gets a notice in the demo's signals
 // with the op id it answers. A tab whose stream the session does not hold
 // gets no notice.
+// goReq is a payload as dsgen would see it, its DSCommand by hand.
+type goReq struct {
+	Tab string `json:"tab"`
+	Op  string `json:"op"`
+}
+
+func (goReq) DSCommand() (slug, name string) { return "cursor-party", "go" }
+
 func TestActionNotices(t *testing.T) {
 	db, err := sqlite.Open(context.Background(), filepath.Join(t.TempDir(), "kit.db"), sqlite.Options{})
 	if err != nil {
@@ -49,16 +57,7 @@ func TestActionNotices(t *testing.T) {
 	mux := http.NewServeMux()
 	k := demo.NewKit("cursor-party", mux, demo.Deps{DB: db, W: w, Hub: hub, Log: slog.New(slog.DiscardHandler),
 		Open: func(v demo.Viewer) bool { return v.Tab == "t1" }})
-	k.Action("go", demo.Rate{Every: time.Hour, Burst: 1}, func(rw http.ResponseWriter, r *http.Request) {
-		var req struct{ Tab, Op string }
-		if !demo.Decode(rw, r, &req) {
-			return
-		}
-		v, ok := demo.Who(r, req.Tab)
-		if !ok {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	demo.Command[goReq]{Rate: demo.Rate{Every: time.Hour, Burst: 1}}.Mount(k, func(rw http.ResponseWriter, r *http.Request, v demo.Viewer, req goReq) {
 		k.Act(rw, r, v, demo.Ack{"ack": req.Op}, writer.Func(func(*writer.Tx) error { return errors.New("disk full") }))
 	})
 	mux.HandleFunc("GET /stream", func(rw http.ResponseWriter, r *http.Request) {
