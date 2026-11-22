@@ -244,15 +244,21 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 }
 
 // homeComponents are the bundles of the components the landing page
-// renders: the quick start's tabs and the embeds'.
+// renders, the quick start's tabs and the embeds', and the controllers
+// of the embeds that mount one.
 func (s *Server) homeComponents() []views.Script {
 	uses := []string{"tabs"}
+	var controllers []views.Script
 	for _, d := range s.demos {
-		if d.Embed != nil {
-			uses = append(uses, d.Components...)
+		if d.Embed == nil {
+			continue
+		}
+		uses = append(uses, d.Components...)
+		if d.Embed.Controller && d.Script != nil {
+			controllers = append(controllers, views.Script{URL: s.static.URL(demoScript(d.Slug))})
 		}
 	}
-	return s.components(uses...)
+	return append(s.components(uses...), controllers...)
 }
 
 // embeds are the views of the landing page's slots, nil if none streams.

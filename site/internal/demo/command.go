@@ -82,6 +82,10 @@ type Post struct {
 	RequestCancellation string `json:"requestCancellation,omitempty"`
 	Retry               string `json:"retry,omitempty"`
 	RetryMaxCount       int    `json:"retryMaxCount,omitempty"`
+	// Quiet drops what a failed request rejects with: for an action whose
+	// person learns nothing from a failure (a cursor's move), so that the
+	// console stays empty.
+	Quiet bool `json:"-"`
 }
 
 func (c Command[Req]) post(payload string, o Post) ds.Expr {
@@ -89,7 +93,11 @@ func (c Command[Req]) post(payload string, o Post) ds.Expr {
 	if opts != "}" {
 		opts = ", " + opts
 	}
-	return ds.Expr("@post(" + ds.Lit(c.URL()) + ", {payload: " + payload + opts + ")")
+	post := "@post(" + ds.Lit(c.URL()) + ", {payload: " + payload + opts + ")"
+	if o.Quiet {
+		post += ".catch(() => {})"
+	}
+	return ds.Expr(post)
 }
 
 // On is the data-on attribute that posts the action whenever the
@@ -180,6 +188,18 @@ func (c Command[Req]) PostSignals(o Post, args ...Arg) ds.Expr {
 // takes for an answer (lane 0 is a lane). A request whose tab is not the
 // session's open tab is a 400 too (Who).
 func (c Command[Req]) Mount(k *Kit, h func(w http.ResponseWriter, r *http.Request, v Viewer, req Req)) {
+	c.mount(k, true, h)
+}
+
+// MountOpen is Mount for an action whose tab need not have its stream
+// open: the cursor party's moves, which a page sends from its first
+// pointer move, and which tell their person nothing. The handler checks
+// the viewer itself.
+func (c Command[Req]) MountOpen(k *Kit, h func(w http.ResponseWriter, r *http.Request, v Viewer, req Req)) {
+	c.mount(k, false, h)
+}
+
+func (c Command[Req]) mount(k *Kit, open bool, h func(w http.ResponseWriter, r *http.Request, v Viewer, req Req)) {
 	slug, name := c.names()
 	if slug != k.slug {
 		panic(fmt.Sprintf("demo %s: command %s is the payload of demo %s", k.slug, name, slug))
@@ -192,7 +212,7 @@ func (c Command[Req]) Mount(k *Kit, h func(w http.ResponseWriter, r *http.Reques
 		}
 		tab := reflect.ValueOf(req).FieldByIndex(tabIndex[Req]()).String()
 		v, ok := Who(r, tab)
-		if !ok {
+		if !ok && open {
 			w.WriteHeader(http.StatusBadRequest) // no page of ours sends it
 			return
 		}

@@ -3,53 +3,41 @@
 The floor follows the pointer on the window, so the hero's links and buttons, which sit above the floor, take no move away. Datastar's throttle lets a move through every 67 ms and drops the ones in between, so a debounce sends the place where the pointer comes to rest. A tap or a click sends its place too.
 
 ```go title=expr.go
-func floor() templ.Attributes {
-	return templ.Attributes{
-		"data-on:pointermove__window__throttle." + ds.Ms(Throttle): move,
-		"data-on:pointermove__window__debounce." + ds.Ms(Rest):  move,
-		"data-on:pointerdown": move,
-		"data-init":           anchorHomes(),
+	move := string(ds.Call(ActMove))
+	return demo.Attrs(
+		MoveAction.On(demo.Post{RequestCancellation: "disabled", Retry: "never", Quiet: true}),
+		templ.Attributes{
+			"data-" + Slug: true,
+			AttrHomes:      anchorHomes(),
+			"data-on:pointermove__window__throttle." + ds.Ms(Throttle): move,
+			"data-on:pointermove__window__debounce." + ds.Ms(Rest):     move,
+			"data-on:pointerdown": move,
+		},
+	)
+```
+
+Each of them calls `@cursorPartyMove()`, which the page's controller (`cursor-party.ts`, checked by tsc against the demo's Go structs) implements. The floor's place is not the same on every screen: a phone stacks the hero's words that a desktop lays out side by side. So a move names an anchor, the nearest of the boxes the hero marks with `data-cp-anchor` (a line of the acrostic, the monolith, the lede, the buttons), and gives the pointer's place in fractions of that box. The controller measures the anchors on this page, hands their boxes to CSS as custom properties on the floor, which the stream never patches, and measures again when the floor or an anchor changes size. A page without an anchor, like this one, puts it where the desktop hero has it, its home in `data-cp-homes`.
+
+```ts title=cursor-party.ts
+const measure = (): void => {
+	const f = el.getBoundingClientRect()
+	const next: Record<string, Box> = {}
+	for (const n of names) {
+		const r = find(n)?.getBoundingClientRect()
+		const h = homes[n] ?? [0, 0, 0, 0]
+		const b: Box = r && r.width && r.height ? [r.left - f.left, r.top - f.top, r.width, r.height] : [h[0] * f.width, h[1] * f.height, h[2] * f.width, h[3] * f.height]
+		next[n] = b
+		;(['x', 'y', 'w', 'h'] as const).forEach((k, i) => el.style.setProperty(`${PropAnchor}${n}-${k}`, `${b[i]}px`))
 	}
+	at = next
 }
 ```
 
-The floor's place is not the same on every screen: a phone stacks the hero's words that a desktop lays out side by side. So a move names an anchor, the nearest of the boxes the hero marks with `data-cp-anchor` (a line of the acrostic, the monolith, the lede, the buttons), and gives the pointer's place in fractions of that box. The floor's `data-init` measures the anchors on this page, hands their boxes to CSS as custom properties on the floor, which the stream never patches, and measures again when the floor or an anchor changes size. A page without an anchor, like this one, puts it where the desktop hero has it.
+A move carries that anchor, the place beside it, and the next number of `$_cursorParty.seq`, the payload of the Go struct `MoveReq`. Moves go out side by side: none cancels the one before, none is retried, and a failed one is dropped, since the next one replaces it.
 
-```go title=expr.go
-const measure = `const names = NAMES, homes = HOMES;
-const find = (n) => document.querySelector('[data-cp-anchor="' + n + '"]');
-const run = () => {
-	const f = el.getBoundingClientRect(), at = {};
-	for (const n of names) {
-		const a = find(n), r = a && a.getBoundingClientRect(), h = homes[n];
-		const b = r && r.width && r.height ? [r.left - f.left, r.top - f.top, r.width, r.height] : [h[0] * f.width, h[1] * f.height, h[2] * f.width, h[3] * f.height];
-		at[n] = b;
-		['x', 'y', 'w', 'h'].forEach((k, i) => el.style.setProperty('--cp-' + n + '-' + k, b[i] + 'px'));
-	}
-	el.cpAnchors = at;
-};
-run();
-const ro = new ResizeObserver(run);
-ro.observe(el);
-for (const n of names) { const a = find(n); a && ro.observe(a) }`
-```
-
-A move carries that anchor, the place beside it, and the next number of `$_cursorParty.seq`. Moves go out side by side: none cancels the one before, and none is retried.
-
-```go title=expr.go
-const move = `const f = el.getBoundingClientRect(), px = evt.clientX - f.left, py = evt.clientY - f.top, at = el.cpAnchors;
-if (evt.isPrimary && at && px >= 0 && py >= 0 && px <= f.width && py <= f.height) {
-	let best = '', d = Infinity;
-	for (const n in at) {
-		const b = at[n], dx = Math.max(b[0] - px, 0, px - b[0] - b[2]), dy = Math.max(b[1] - py, 0, py - b[1] - b[3]);
-		if (dx * dx + dy * dy < d) { d = dx * dx + dy * dy; best = n }
-	}
-	const b = at[best], r = (v) => Math.max(-20, Math.min(20, Math.round(v * 1e4) / 1e4));
-	@post('/cmd/cursor-party/move', {
-		payload: {tab: $_tab, a: best, x: r((px - b[0]) / b[2]), y: r((py - b[1]) / b[3]), seq: ++$_cursorParty.seq},
-		requestCancellation: 'disabled', retry: 'never', retryMaxCount: 0,
-	}).catch(() => {})
-}`
+```ts title=cursor-party.ts
+s.seq++
+send('cursor-party-move', { a: best, x: fraction((px - b[0]) / b[2]), y: fraction((py - b[1]) / b[3]), seq: s.seq })
 ```
 
 ## The command

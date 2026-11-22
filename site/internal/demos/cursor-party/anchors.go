@@ -2,7 +2,6 @@ package cursorparty
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 // An Anchor is a box a cursor is pinned to. The landing page's hero marks
@@ -46,12 +45,9 @@ func knownAnchor(name string) bool {
 // script.
 func anchorHomes() string {
 	m := make(map[string][4]float64, len(Anchors))
-	names := make([]string, len(Anchors))
-	for i, a := range Anchors {
+	for _, a := range Anchors {
 		m[a.Name] = a.Home
-		names[i] = a.Name
 	}
 	b, _ := json.Marshal(m)
-	n, _ := json.Marshal(names)
-	return strings.NewReplacer("NAMES", string(n), "HOMES", string(b)).Replace(measure)
+	return string(b)
 }

@@ -43,6 +43,8 @@ var (
 	how string
 	//go:embed cursor-party.css
 	css string
+	//go:embed cursor-party.ts ds.gen.ts
+	script embed.FS
 )
 
 // Demo is the cursor party as the site lists it.
@@ -55,10 +57,11 @@ var Demo = demo.Demo{
 	Server:     server,
 	How:        how,
 	CSS:        css,
+	Script:     script,
 	Components: []string{"sparkline"},
 	Mount:      mount,
 	Page:       demo.Part{Render: renderPage, Views: views},
-	Embed:      &demo.Embed{Slot: demo.SlotHero, Part: demo.Part{Render: renderEmbed, Views: views}},
+	Embed:      &demo.Embed{Slot: demo.SlotHero, Part: demo.Part{Render: renderEmbed, Views: views}, Controller: true},
 	Sweep:      sweep,
 }
 

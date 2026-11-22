@@ -1,11 +1,15 @@
 package cursorparty
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/zweiundeins/lith/site/internal/demo"
+)
 
 // Stage is the party on its page: the floor that the cursors cross, the
 // counter, and how to see your own cursor arrive.
 templ Stage(self string, layer []byte, here int, history []int) {
-	<div class="cp" data-signals={ signals }>
+	<div class="cp" data-signals={ Signals{}.Decl() }>
 		@selfHidden(self)
 		<div class="cp__floor" { floor()... }>
 			<div class="cp__hint" aria-hidden="true">
@@ -27,12 +31,12 @@ templ Stage(self string, layer []byte, here int, history []int) {
 // Hero is the party behind the landing page's title: the floor fills the
 // hero, and a badge in its corner links to the demo.
 templ Hero(self string, layer []byte, here int, history []int) {
-	<div class="cp cp--hero" data-signals={ signals }>
+	<div class="cp cp--hero" data-signals={ Signals{}.Decl() }>
 		@selfHidden(self)
 		<div class="cp__floor" { floor()... }>
 			@templ.Raw(string(layer))
 		</div>
-		<a class="cp-badge" href="/demos/cursor-party" data-class:is-live="$_live">
+		<a class="cp-badge" href="/demos/cursor-party" data-class:is-live={ demo.Live }>
 			<span class="cp-badge__dot" aria-hidden="true"></span>
 			<span class="cp-badge__title">Cursor party</span>
 			@Count(here, history)

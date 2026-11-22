@@ -127,6 +127,10 @@ var Slots = []Slot{SlotHero, SlotLinear, SlotImmediate, SlotTicks, SlotHypermedi
 type Embed struct {
 	Slot Slot
 	Part
+	// Controller is true when the slot mounts the demo's controller
+	// (Script), which the landing page then loads: the cursor party's
+	// floor. A slot without one loads no script of the demo's.
+	Controller bool
 }
 
 // SweepEvery is how often the site runs every demo's Sweep.

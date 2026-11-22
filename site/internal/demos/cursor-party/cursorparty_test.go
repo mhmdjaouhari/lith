@@ -229,7 +229,7 @@ func TestPage(t *testing.T) {
 				`id="cursor-party-` + bobID + `"`,
 				`data-on:pointermove__window__throttle.67ms=`,
 				`data-on:pointermove__window__debounce.200ms=`,
-				`data-signals="{_cursorParty: {seq: 0}}"`,
+				`data-signals="{&#34;_cursorParty&#34;:{&#34;seq&#34;:0}}"`,
 				`id="cursor-party-count"`,
 				`--cursor-party-here:1;`,
 				`<sb-sparkline values="[`,
