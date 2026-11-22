@@ -46,6 +46,7 @@ var dsDOM = map[string]string{
 	"PropYou":        PropYou,
 	"AnimBusy":       AnimBusy,
 	"AnimNudge":      AnimNudge,
+	"ActShaken":      ActShaken,
 }
 
 // SignalsRefs are the signals of Signals, each a ds.Ref.

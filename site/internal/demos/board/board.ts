@@ -11,8 +11,9 @@
 // by MoveReq, which the stage posts; the board's next frame moves the
 // card.
 
-import { announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable } from 'lith-ui'
+import { actions, announcer, attr, commands, controller, local, must, num, opId, pending, type Place, type Rule, Sheet, signals, sortable } from 'lith-ui'
 import {
+	type Actions,
 	AnimBusy,
 	AnimNudge,
 	AttrCard,
@@ -148,12 +149,13 @@ controller('board', (el, scope) => {
 		s.problem = ''
 		if (!st.item) sort.aim(-1, 0)
 	})
-	const shaken = (evt: AnimationEvent): void => {
-		if (evt.animationName === AnimNudge) h.nudge = 0
-	}
-	scope.listen(el, 'animationend', shaken)
-	// A frame that replaces the card mid-shake ends it too.
-	scope.listen(el, 'animationcancel', shaken)
+	actions<Actions>(el, scope, {
+		// The stage's animationend, and its animationcancel: a frame that
+		// replaces the card mid-shake ends it too.
+		boardShaken({ evt }) {
+			if (evt instanceof AnimationEvent && evt.animationName === AnimNudge) h.nudge = 0
+		},
+	})
 
 	// looks is the style of the card in hand (--bd-lift under the pointer,
 	// which leaves a hole behind its ghost; --bd-pick from the keyboard,

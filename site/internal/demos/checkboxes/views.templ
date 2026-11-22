@@ -3,26 +3,32 @@ package checkboxes
 import (
 	"strconv"
 
+	"github.com/zweiundeins/lith/site/internal/ds"
 	"github.com/zweiundeins/lith/site/internal/format"
 )
 
 // Stage is the demo on its page: the numbers, the jump field, and the grid
 // at the tab's window, its tiles drawn from the document's read. The
 // stage holds the signals; no frame morphs it. data-checkboxes mounts its
-// controller (checkboxes.ts) once its signals are declared: it sends the
-// clicks, which the stage posts, the windows, which their own elements
-// post, and keeps the boxes that wait.
+// controller (checkboxes.ts) once its signals are declared: it implements
+// the actions the stage's events call, sends the clicks, which the stage
+// posts, and the windows, which their own elements post, and keeps the
+// boxes that wait.
 templ Stage(w Window, tiles []shown, s Stats) {
 	<div
 		class="cb"
 		data-signals={ NewSignals().Decl() }
 		data-checkboxes
-		{ setPosts... }
-		{ pitch... }
+		data-on:click={ ds.Call(ActClick) }
+		data-on:datastar-prop-change={ ds.Call(ActFlipped) }
+		data-on:keydown={ ds.Call(ActKey) }
+		data-on:sb-window={ ds.Call(ActWindow) }
+		data-effect={ settle }
+		{ stageAttrs... }
 	>
 		<span hidden data-window { windowPosts... }></span>
 		<span hidden data-greet { greetPosts... }></span>
-		<form class={ ClassJump }>
+		<form class={ ClassJump } data-on:submit__prevent={ ds.Call(ActJump) }>
 			<label for="checkboxes-jump">Go to box</label>
 			<div class="cb-jump__row">
 				<input id="checkboxes-jump" class="input" type="number" min="1" max={ strconv.Itoa(Boxes) } step="1" inputmode="numeric" placeholder="500000" data-bind={ S.Jump.Path() }/>

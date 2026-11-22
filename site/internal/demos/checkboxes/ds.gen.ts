@@ -16,6 +16,15 @@ export const ClassTile = "cb-tile"
 export const ClassBoxes = "cb-boxes"
 export const PropPitch = "--cb-pitch"
 export const PropChrome = "--cb-chrome"
+export const ActClick = "checkboxesClick"
+export const ActFlipped = "checkboxesFlipped"
+export const ActKey = "checkboxesKey"
+export const ActWindow = "checkboxesWindow"
+export const ActMeasure = "checkboxesMeasure"
+export const ActJump = "checkboxesJump"
+
+/** The actions the page's markup calls (@name()), which the controller implements: lith-ui's actions<Actions>(). */
+export type Actions = "checkboxesClick" | "checkboxesFlipped" | "checkboxesKey" | "checkboxesWindow" | "checkboxesMeasure" | "checkboxesJump"
 
 // The constants that the Go code and the controller share (//ds:const).
 export const Boxes = 1000000

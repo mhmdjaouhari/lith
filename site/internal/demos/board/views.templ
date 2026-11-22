@@ -32,6 +32,8 @@ templ Stage(b Board, n Numbers, people []Person, me string, now time.Time) {
 		data-signals={ NewSignals(b.Version).Decl() }
 		data-board
 		data-class:is-dragging={ S.Mode.Eq(Pointer) }
+		data-on:animationend={ shaken }
+		data-on:animationcancel={ shaken }
 		{ post... }
 	>
 		@meStyle(me)

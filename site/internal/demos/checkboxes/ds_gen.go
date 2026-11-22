@@ -25,6 +25,12 @@ var dsDOM = map[string]string{
 	"ClassBoxes": ClassBoxes,
 	"PropPitch":  PropPitch,
 	"PropChrome": PropChrome,
+	"ActClick":   ActClick,
+	"ActFlipped": ActFlipped,
+	"ActKey":     ActKey,
+	"ActWindow":  ActWindow,
+	"ActMeasure": ActMeasure,
+	"ActJump":    ActJump,
 }
 
 // SignalsRefs are the signals of Signals, each a ds.Ref.

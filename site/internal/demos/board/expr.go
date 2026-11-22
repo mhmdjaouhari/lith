@@ -2,6 +2,7 @@ package board
 
 import (
 	"github.com/zweiundeins/lith/site/internal/demo"
+	"github.com/zweiundeins/lith/site/internal/ds"
 )
 
 // The Datastar expressions of the demo, built from the typed refs of its
@@ -23,3 +24,6 @@ var post = MoveAction.On(demo.Post{RequestCancellation: "disabled"})
 // rate limit. It goes out from an element of its own, so that the stage's
 // count of the move's requests in flight never sees it.
 var helloPosts = HelloAction.On(demo.Post{Retry: "error", RetryMaxCount: 5})
+
+// shaken ends a refused card's shake (board.ts).
+var shaken = ds.Call(ActShaken)

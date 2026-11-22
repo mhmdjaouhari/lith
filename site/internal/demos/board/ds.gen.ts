@@ -37,6 +37,10 @@ export const PropMe = "--bd-me"
 export const PropYou = "--bd-you"
 export const AnimBusy = "bd-busy"
 export const AnimNudge = "bd-nudge"
+export const ActShaken = "boardShaken"
+
+/** The actions the page's markup calls (@name()), which the controller implements: lith-ui's actions<Actions>(). */
+export type Actions = "boardShaken"
 
 /** Go: board.CardID. */
 export type CardID = number

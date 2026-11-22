@@ -27,6 +27,16 @@ const (
 
 	PropPitch  = "--cb-pitch"  // px from box to box, a number, from the controller's measure
 	PropChrome = "--cb-chrome" // a tile's head and the space under it
+
+	// The actions the stage's events call (views.templ), which
+	// checkboxes.ts implements: tsc fails on one it lacks, TestSeam on one
+	// the page does not call.
+	ActClick   = "checkboxesClick"   // a click on a box: it sends the state the box should take
+	ActFlipped = "checkboxesFlipped" // a frame set a box (datastar-prop-change): its wait ends
+	ActKey     = "checkboxesKey"     // a key on a box: the arrows move the focus
+	ActWindow  = "checkboxesWindow"  // the list asks for a window as it scrolls (sb-window)
+	ActMeasure = "checkboxesMeasure" // the window was resized: the grid fits its width again
+	ActJump    = "checkboxesJump"    // the jump form: the list scrolls to the box
 )
 
 // The grid's numbers, which checkboxes.ts reads from ds.gen.ts.

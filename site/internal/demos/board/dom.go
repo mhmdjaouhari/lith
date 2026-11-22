@@ -53,4 +53,9 @@ const (
 	PropYou    = "--bd-you"    // and what its name adds
 	AnimBusy   = "bd-busy"
 	AnimNudge  = "bd-nudge"
+
+	// The action the stage's animations call (views.templ), which board.ts
+	// implements: a refused card's shake ended, with its animation or with
+	// a frame that replaced the card mid-shake.
+	ActShaken = "boardShaken"
 )
